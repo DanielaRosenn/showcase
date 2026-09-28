@@ -298,8 +298,8 @@ details.help pre{font-size:10.5px;max-height:none}
     </div>
     <div class="actions">
       <select id="scenario" class="btn" aria-label="Scenario">
-        <option value="support">A &#x00b7; Enterprise support ticket</option>
-        <option value="research">B &#x00b7; Research &amp; report</option>
+        <option value="support">A &#x00b7; Open-source issue &#x2192; PR</option>
+        <option value="research">B &#x00b7; Upgrade research report</option>
       </select>
       <button class="btn primary" id="btnRun" title="Start a fresh live run of the selected scenario"><svg viewBox="0 0 16 16"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg><span class="lbltxt">Run</span></button>
       <button class="btn" id="btnRestart" title="Replay this run from the start"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8a5 5 0 1 0 1.6-3.7"/><path d="M3 2.5v3h3"/></svg><span class="lbltxt">Restart</span></button>
@@ -355,12 +355,12 @@ details.help pre{font-size:10.5px;max-height:none}
       <div class="drop"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#ffb547" stroke-width="1.5"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg><p>Drop a <b>Langfuse trace export</b> or <b>OTLP-JSON</b> file anywhere on the page, or</p><label class="btn primary" for="fileIn" style="display:inline-flex">Choose JSON file</label><input type="file" id="fileIn" accept=".json,application/json" hidden></div>
       <details class="help"><summary>Accepted formats</summary>
         <h4>Langfuse trace (observations[])</h4>
-<pre class="io">{ "id": "trace-1", "name": "support-ticket",
+<pre class="io">{ "id": "trace-1", "name": "fix-issue",
   "observations": [
     { "id": "o1", "type": "AGENT", "name": "Orchestrator",
       "startTime": "2026-09-28T10:00:00.000Z", "endTime": "2026-09-28T10:01:10Z" },
     { "id": "o2", "parentObservationId": "o1", "type": "GENERATION",
-      "name": "plan", "model": "claude-sonnet-4.5",
+      "name": "plan", "model": "claude-sonnet-5",
       "startTime": "&#x2026;", "endTime": "&#x2026;",
       "input": [...], "output": "&#x2026;",
       "usageDetails": { "input": 2140, "output": 412 },
@@ -380,7 +380,7 @@ details.help pre{font-size:10.5px;max-height:none}
   { "spanId": "a2", "parentSpanId": "a1", "name": "chat",
     "attributes": [
       { "key": "gen_ai.operation.name", "value": { "stringValue": "chat" } },
-      { "key": "gen_ai.request.model", "value": { "stringValue": "claude-haiku-4.5" } },
+      { "key": "gen_ai.request.model", "value": { "stringValue": "claude-haiku-4-5" } },
       { "key": "gen_ai.usage.input_tokens", "value": { "intValue": "812" } },
       { "key": "gen_ai.usage.output_tokens", "value": { "intValue": "96" } } ] }
 ]}]}]}</pre>
@@ -471,206 +471,199 @@ function builder(prefix, seed) {
   return { rng, j, ji, add, events };
 }
 
-const TICKET = `Ticket #48213 \u00b7 ACME Logistics (Enterprise, 1,240 seats)
-Subject: Frankfurt-02 keeps dropping tunnels every afternoon
+const ISSUE = `Example issue (simulated) · github.com/fastapi/fastapi
+Title: Tutorial example still passes the deprecated \`regex=\` to Query()
 
-Since Tuesday our Frankfurt-02 warehouse loses connectivity 3\u20134 times a day for ~2 minutes. Handheld scanners go offline and trucks queue at the dock. We are 30 days from renewal and honestly evaluating alternatives. We need a root cause and to know what you're going to do about it.
-\u2014 M. Keller, Head of IT`;
+Copying the "Query Parameters and String Validations" example into my project prints a DeprecationWarning on every test run: \`regex\` has been deprecated, please use \`pattern\` instead. Could the example and its test be updated?
+— a first-time contributor`;
 
 function scenarioSupport(seed) {
-  const B = builder('sup', seed); const { j, ji, add } = B;
-  const O = 'Orchestrator', KB = 'KB Researcher', TA = 'Telemetry Analyst', PA = 'Pricing Agent';
-  const orch = add({ type: 'agent', name: O, agent: O, startTime: 0, endTime: null, input: TICKET, meta: { role: 'Planner \u2014 triages the ticket, delegates, composes the reply', narr: 'Ticket #48213 lands on the Orchestrator: ACME Logistics, intermittent outages at Frankfurt-02, renewal in 30 days.' } });
+  const B = builder('oss', seed); const { j, ji, add } = B;
+  const O = 'Maintainer Bot', CS = 'Code Scout', TR = 'Test Runner', PA = 'Patch Author';
+  const orch = add({ type: 'agent', name: O, agent: O, startTime: 0, endTime: null, input: ISSUE, meta: { role: 'Triages the issue, delegates, and writes the reply on GitHub', narr: 'A simulated issue lands on the Maintainer Bot: a FastAPI tutorial example still uses the deprecated regex= argument.' } });
   let t = 0.9, s;
-  add({ type: 'generation', name: 'plan_ticket', agent: O, parentId: orch.id, startTime: s = t, endTime: t = s + j(7.2), model: 'claude-opus-5-5', tokens: { in: ji(2140), out: ji(418) },
-    input: [{ role: 'system', content: 'You are the support orchestrator. Classify the ticket, then split it into parallel sub-tasks for specialist agents. Respond with a JSON plan.' }, { role: 'user', content: TICKET }],
-    output: { intent: ['connectivity_incident', 'churn_risk'], priority: 'P1', subtasks: [{ agent: KB, goal: 'Find known issues for intermittent tunnel drops at edge sites' }, { agent: TA, goal: 'Correlate FRA-02 tunnel/BGP telemetry for the last 7 days' }, { agent: PA, goal: 'Assess renewal risk and prepare a retention offer within policy' }] },
-    meta: { narr: 'The planner reads the ticket with claude-opus-4.5: one incident, one churn risk \u2014 three parallel tracks.' } });
+  add({ type: 'generation', name: 'triage_issue', agent: O, parentId: orch.id, startTime: s = t, endTime: t = s + j(6.4), model: 'claude-opus-5-5', tokens: { in: ji(1980), out: ji(402) },
+    input: [{ role: 'system', content: 'You maintain an open-source Python web framework. Classify the issue, then split it into parallel sub-tasks for specialist agents. Respond with a JSON plan.' }, { role: 'user', content: ISSUE }],
+    output: { labels: ['docs', 'good first issue'], priority: 'normal', subtasks: [{ agent: CS, goal: 'Find every example and test that still passes regex= to Query/Path' }, { agent: TR, goal: 'Reproduce the DeprecationWarning in the tutorial tests' }, { agent: PA, goal: 'Prepare a minimal patch and open a pull request' }] },
+    meta: { narr: 'The bot triages with claude-opus-5-5: a docs fix, good first issue — three parallel tracks.' } });
   const d0 = t + 0.5;
-  const kb = add({ type: 'agent', name: KB, agent: KB, parentId: orch.id, startTime: d0, endTime: null, input: 'Find known issues for intermittent tunnel drops at edge sites (FRA-02).', meta: { role: 'Searches the support knowledge base for known issues and fixes', narr: 'The planner split the task in three: KB Researcher, Telemetry Analyst and Pricing Agent spin up.' } });
-  const ta = add({ type: 'agent', name: TA, agent: TA, parentId: orch.id, startTime: d0 + 0.25, endTime: null, input: 'Correlate FRA-02 tunnel/BGP telemetry for the last 7 days.', meta: { role: 'Queries network telemetry and site status tools', narr: '' } });
-  const pa = add({ type: 'agent', name: PA, agent: PA, parentId: orch.id, startTime: d0 + 0.5, endTime: null, input: 'Assess renewal risk and prepare a retention offer within policy.', meta: { role: 'Reads contract terms and proposes retention offers', narr: '' } });
+  const cs = add({ type: 'agent', name: CS, agent: CS, parentId: orch.id, startTime: d0, endTime: null, input: 'Find every example and test that still passes regex= to Query/Path.', meta: { role: 'Searches and reads the repository', narr: 'Code Scout, Test Runner and Patch Author spin up.' } });
+  const tr = add({ type: 'agent', name: TR, agent: TR, parentId: orch.id, startTime: d0 + 0.25, endTime: null, input: 'Reproduce the DeprecationWarning in the tutorial tests.', meta: { role: 'Runs pytest in a sandbox and reads the output', narr: '' } });
+  const pa = add({ type: 'agent', name: PA, agent: PA, parentId: orch.id, startTime: d0 + 0.5, endTime: null, input: 'Prepare a minimal patch and open a pull request.', meta: { role: 'Writes the change and opens the pull request', narr: '' } });
 
-  // --- KB Researcher
+  // --- Code Scout
   let k = d0 + 0.7;
-  add({ type: 'retriever', name: 'kb_search', agent: KB, parentId: kb.id, startTime: s = k, endTime: k = s + j(2.3), model: 'text-embedding-3-small', tokens: { in: 24, out: 0 },
-    input: { index: 'support-kb-v7', query: 'intermittent IPsec tunnel drops edge socket afternoon pattern', top_k: 6 },
-    output: { docs: [{ id: 'KB-2291', title: 'Tunnel flaps on X1700 sockets after firmware 5.12', score: 0.89 }, { id: 'KB-1873', title: 'ISP DHCP lease renewal triggers WAN failover', score: 0.81 }, { id: 'KB-3310', title: 'MTU mismatch on LTE backup links', score: 0.74 }, { id: 'KB-0932', title: 'Scheduled QoS policy conflicts', score: 0.69 }, { id: 'KB-2040', title: 'BGP hold timer tuning for branch sockets', score: 0.66 }, { id: 'KB-1102', title: 'High CPU during large backups', score: 0.61 }] },
-    meta: { docs: 6, narr: 'KB Researcher queries the knowledge vault: \u201cintermittent tunnel drops, afternoon pattern\u201d \u2014 6 documents back.' } });
+  add({ type: 'tool', name: 'repo_search', agent: CS, parentId: cs.id, startTime: s = k, endTime: k = s + j(2.1),
+    input: { repo: 'fastapi/fastapi', query: 'regex=', paths: ['docs_src/', 'tests/'] },
+    output: { matches: [{ path: 'docs_src/query_params_str_validations/tutorial010_an_py310.py', line: 9 }, { path: 'docs_src/query_params_str_validations/tutorial010_py310.py', line: 9 }, { path: 'tests/test_tutorial/test_query_params_str_validations/test_tutorial010.py', line: 31 }], total: 3 },
+    meta: { narr: 'Code Scout searches the repo for regex= in docs_src/ and tests/ — 3 matches.' } });
   k += j(0.4);
-  add({ type: 'generation', name: 'summarize_kb', agent: KB, parentId: kb.id, startTime: s = k, endTime: k = s + j(8.2), model: 'claude-sonnet-5', tokens: { in: ji(5820), out: ji(640) },
-    input: [{ role: 'system', content: 'Summarize the retrieved KB articles relevant to the ticket. Rank by likelihood.' }, { role: 'user', content: '[6 documents \u00b7 5,640 tokens] \u2026' }],
-    output: 'Top match KB-2291: firmware 5.12 has a BGP keepalive regression under sustained CPU load (e.g. scheduled backups). Symptoms match: ~2-minute drops, afternoon pattern. Fix: upgrade to 5.12.4, or raise the BGP hold timer to 90 s as a workaround. Secondary: KB-1873 (DHCP lease renewal) \u2014 verify WAN logs.',
-    meta: { narr: 'KB Researcher reads the articles: KB-2291 \u2014 a firmware 5.12 keepalive regression \u2014 looks like a strong match.' } });
-  k += j(0.5);
-  add({ type: 'retriever', name: 'kb_search', agent: KB, parentId: kb.id, startTime: s = k, endTime: k = s + j(1.8), model: 'text-embedding-3-small', tokens: { in: 18, out: 0 },
-    input: { index: 'support-kb-v7', query: 'firmware 5.12 BGP keepalive regression hold timer workaround', top_k: 3 },
-    output: { docs: [{ id: 'KB-2291', title: 'Tunnel flaps on X1700 sockets after firmware 5.12', score: 0.94 }, { id: 'KB-2040', title: 'BGP hold timer tuning for branch sockets', score: 0.83 }, { id: 'REL-5.12.4', title: 'Release notes 5.12.4 \u2014 fixes CSR-8812 keepalive starvation', score: 0.8 }] },
-    meta: { docs: 3, narr: 'A second, narrower search pulls the 5.12.4 release notes confirming the fix.' } });
+  add({ type: 'retriever', name: 'read_files', agent: CS, parentId: cs.id, startTime: s = k, endTime: k = s + j(1.8), model: 'text-embedding-3-small', tokens: { in: 26, out: 0 },
+    input: { files: ['fastapi/params.py', 'fastapi/param_functions.py'], query: 'regex deprecated pattern' },
+    output: { docs: [{ id: 'fastapi/params.py', title: 'Param.__init__ — regex kept for backwards compatibility, warns and maps to pattern', score: 0.91 }, { id: 'fastapi/param_functions.py', title: 'Query() signature — regex marked deprecated', score: 0.86 }] },
+    meta: { docs: 2, narr: 'It reads fastapi/params.py and param_functions.py to confirm how regex= is handled.' } });
   k += j(0.4);
-  add({ type: 'generation', name: 'draft_resolution', agent: KB, parentId: kb.id, startTime: s = k, endTime: k = s + j(12.5), model: 'claude-sonnet-5', tokens: { in: ji(7340), out: ji(910) },
-    input: [{ role: 'system', content: 'Draft resolution steps for a P1 connectivity ticket. Be concrete, include a maintenance window.' }, { role: 'user', content: 'Evidence: KB-2291, KB-2040, REL-5.12.4 \u2026' }],
-    output: 'Likely cause: firmware 5.12 keepalive regression on the FRA-02 socket during CPU spikes.\n1) Upgrade FRA-02 to 5.12.4 in tonight\u2019s 22:00 CET window.\n2) Interim: raise BGP hold timer 30 s \u2192 90 s.\n3) Verify with 48 h of tunnel telemetry after the change.',
-    meta: { narr: 'KB Researcher drafts a three-step resolution: upgrade to 5.12.4 tonight, widen the hold timer meanwhile.' } });
-  kb.endTime = k + 0.4; kb.output = 'Resolution draft ready (KB-2291 \u2192 upgrade to 5.12.4).';
+  add({ type: 'generation', name: 'summarize_findings', agent: CS, parentId: cs.id, startTime: s = k, endTime: k = s + j(7.6), model: 'claude-sonnet-5', tokens: { in: ji(6120), out: ji(560) },
+    input: [{ role: 'system', content: 'Summarize what must change. Be precise about files and lines.' }, { role: 'user', content: '[3 matches · 2 source files · 4,980 tokens] …' }],
+    output: 'The framework still accepts regex= but warns and maps it to pattern=. Two tutorial variants pass regex="^fixedquery$"; their shared test checks the old behaviour. Replace regex= with pattern= in both examples. The deprecated path is already covered by tests/test_regex_deprecated_params.py, so no new test is needed.',
+    meta: { narr: 'Code Scout’s summary: swap regex= for pattern= in two examples; an existing test already covers the deprecated path.' } });
+  cs.endTime = k + 0.4; cs.output = '2 examples + 1 test to update; deprecated path already tested.';
 
-  // --- Telemetry Analyst
+  // --- Test Runner
   let m = d0 + 0.8;
-  add({ type: 'tool', name: 'get_site_status', agent: TA, parentId: ta.id, startTime: s = m, endTime: m = s + j(1.6),
-    input: { site: 'FRA-02' }, output: { site: 'FRA-02', socket: 'X1700', firmware: '5.12.1', links: { wan1: 'fiber \u00b7 up', wan2: 'lte \u00b7 standby' }, uptime_7d: '98.91%', open_alarms: 2 },
-    meta: { narr: 'Telemetry Analyst checks FRA-02: socket X1700 on firmware 5.12.1, two open alarms.' } });
+  add({ type: 'tool', name: 'setup_sandbox', agent: TR, parentId: tr.id, startTime: s = m, endTime: m = s + j(3.2),
+    input: { repo: 'fastapi/fastapi', ref: 'master', python: '3.12', install: 'pip install -e . pytest httpx' }, output: { ok: true, python: '3.12', packages: 64 },
+    meta: { narr: 'Test Runner clones the repo into a sandbox and installs the test requirements.' } });
   m += j(0.3);
-  const tq = add({ type: 'tool', name: 'query_network_telemetry', agent: TA, parentId: ta.id, startTime: s = m, endTime: m = s + 12.0, status: 'error',
-    input: { site: 'FRA-02', metrics: ['tunnel_state', 'bgp_events', 'cpu', 'wan_jitter'], window: '7d', resolution: '10s' },
-    output: { error: 'ToolTimeoutError', message: 'telemetry backend did not respond within 12000 ms (window=7d, resolution=10s \u2192 60,480 points \u00d7 4 series)' },
-    meta: { narr: 'Telemetry Analyst pulls 7 days of tunnel, BGP and CPU series at 10-second resolution\u2026' } });
-  add({ type: 'error', name: 'ToolTimeoutError', agent: TA, parentId: tq.id, startTime: m, endTime: m + 0.25, status: 'error',
-    output: { message: 'query_network_telemetry timed out after 12.0 s', retryable: true, policy: 'retry once with coarser resolution' },
-    meta: { narr: 'query_network_telemetry timed out after 12 s \u2014 Telemetry Analyst is retrying with a coarser 1-minute resolution.' } });
-  m += j(1.6);
-  add({ type: 'tool', name: 'query_network_telemetry', agent: TA, parentId: ta.id, startTime: s = m, endTime: m = s + j(7.2),
-    input: { site: 'FRA-02', metrics: ['tunnel_state', 'bgp_events', 'cpu', 'wan_jitter'], window: '7d', resolution: '1m' , retry: 1 },
-    output: { tunnel_drops: 19, pattern: '14:02\u201314:40 CET daily', bgp_hold_expired: 19, cpu_peak: '97% (backup job 14:00)', wan_jitter_p95: '4.1 ms', packet_loss_p95: '0.02%' },
-    meta: { narr: 'The retry succeeds: 19 tunnel drops, all between 14:02 and 14:40, each with a BGP hold-timer expiry.' } });
+  const tq = add({ type: 'tool', name: 'run_pytest', agent: TR, parentId: tr.id, startTime: s = m, endTime: m = s + 12.0, status: 'error',
+    input: { args: ['tests/', '-W', 'error::DeprecationWarning'], timeout_s: 12 },
+    output: { error: 'ToolTimeoutError', message: 'pytest did not finish within 12000 ms (whole suite selected)' },
+    meta: { narr: 'Test Runner runs the whole test suite with deprecation warnings as errors…' } });
+  add({ type: 'error', name: 'ToolTimeoutError', agent: TR, parentId: tq.id, startTime: m, endTime: m + 0.25, status: 'error',
+    output: { message: 'run_pytest timed out after 12.0 s', retryable: true, policy: 'retry once with a narrower selection' },
+    meta: { narr: 'run_pytest timed out after 12 s — Test Runner retries with only the tutorial tests.' } });
+  m += j(1.4);
+  add({ type: 'tool', name: 'run_pytest', agent: TR, parentId: tr.id, startTime: s = m, endTime: m = s + j(6.4),
+    input: { args: ['tests/test_tutorial/test_query_params_str_validations/', '-W', 'error::DeprecationWarning'], timeout_s: 30, retry: 1 },
+    output: { passed: 41, failed: 2, failures: ['test_tutorial010.py::test_query_params_str_validations[tutorial010_py310]', 'test_tutorial010.py::test_query_params_str_validations[tutorial010_an_py310]'], reason: 'DeprecationWarning: `regex` has been deprecated, please use `pattern` instead' },
+    meta: { narr: 'The retry reproduces it: 41 passed, 2 failed — both on the regex deprecation warning.' } });
   m += j(0.5);
-  add({ type: 'generation', name: 'analyze_telemetry', agent: TA, parentId: ta.id, startTime: s = m, endTime: m = s + j(13.5), model: 'claude-sonnet-5', tokens: { in: ji(9120), out: ji(780) },
-    input: [{ role: 'system', content: 'You are a network analyst. Correlate the telemetry and state the most likely root cause with confidence.' }, { role: 'user', content: '{tunnel_drops:19, pattern:"14:02\u201314:40", cpu_peak:"97%", \u2026}' }],
-    output: 'All 19 drops coincide with BGP hold-timer expiry while socket CPU > 95% during the 14:00 backup job. WAN quality is healthy (jitter p95 4.1 ms, loss 0.02%) \u2014 ISP ruled out. Consistent with a keepalive starvation bug. Confidence: high (0.9).',
-    meta: { narr: 'Telemetry Analyst correlates the series: every drop lines up with the 14:00 backup pushing CPU to 97%. The ISP is ruled out.' } });
-  m += j(0.4);
-  add({ type: 'tool', name: 'get_site_status', agent: TA, parentId: ta.id, startTime: s = m, endTime: m = s + j(1.2),
-    input: { site: 'FRA-02', fields: ['maintenance_window', 'upgrade_eligible'] }, output: { site: 'FRA-02', maintenance_window: '22:00\u201323:00 CET', upgrade_eligible: true, target_firmware: '5.12.4' },
-    meta: { narr: 'A final status check confirms FRA-02 is eligible for 5.12.4 in tonight\u2019s window.' } });
-  ta.endTime = m + 0.4; ta.output = 'Root cause: keepalive starvation under CPU load (confidence 0.9).';
+  add({ type: 'generation', name: 'analyze_failures', agent: TR, parentId: tr.id, startTime: s = m, endTime: m = s + j(9.5), model: 'claude-sonnet-5', tokens: { in: ji(7420), out: ji(520) },
+    input: [{ role: 'system', content: 'Explain the test failures and confirm the root cause.' }, { role: 'user', content: '{passed:41, failed:2, reason:"regex deprecated"} …' }],
+    output: 'Both failures come from the two tutorial010 variants. Nothing else in the tutorial tests warns. Replacing regex= with pattern= should make them pass without changing behaviour. Confidence: high (0.93).',
+    meta: { narr: 'Test Runner confirms the cause: only the tutorial010 examples warn.' } });
+  tr.endTime = m + 0.4; tr.output = 'Reproduced: 2 failures, both from regex= (confidence 0.93).';
 
-  // --- Pricing Agent
+  // --- Patch Author
   let p = d0 + 1.0;
-  add({ type: 'tool', name: 'get_contract_terms', agent: PA, parentId: pa.id, startTime: s = p, endTime: p = s + j(2.6),
-    input: { account: 'ACME-LOG-0042' }, output: { plan: 'Enterprise SASE', seats: 1240, arr_usd: 418000, renewal_date: '2026-10-28', self_approval_discount_ceiling: '10%', health_score: 41, p1_tickets_90d: 3 },
-    meta: { narr: 'Pricing Agent pulls the contract: $418k ARR, renewal on Oct 28, health score 41.' } });
+  add({ type: 'tool', name: 'create_branch', agent: PA, parentId: pa.id, startTime: s = p, endTime: p = s + j(1.4),
+    input: { from: 'master', name: 'docs/query-pattern-example' }, output: { ok: true, branch: 'docs/query-pattern-example' },
+    meta: { narr: 'Patch Author opens a branch: docs/query-pattern-example.' } });
   p += j(0.4);
-  add({ type: 'generation', name: 'evaluate_retention_offer', agent: PA, parentId: pa.id, startTime: s = p, endTime: p = s + j(11.5), model: 'claude-opus-5-5', tokens: { in: ji(4210), out: ji(690) },
-    input: [{ role: 'system', content: 'You are a renewal pricing agent. Estimate churn risk and propose the smallest offer likely to retain the account. Respect discount policy.' }, { role: 'user', content: 'Contract ACME-LOG-0042 \u00b7 health 41 \u00b7 3 P1s in 90 d \u00b7 customer mentions evaluating alternatives.' }],
-    output: 'Churn risk: HIGH (health 41, 3 P1s in 90 days, competitor evaluation mentioned). Recommend a 15% renewal discount on a 12-month term (\u2248 $62.7k ARR impact) plus a 2-day service credit. 15% exceeds the 10% self-approval ceiling \u2192 route to Deal Desk for human approval.',
-    meta: { narr: 'Pricing Agent rates churn risk HIGH and wants to offer 15% \u2014 above its 10% ceiling.' } });
+  add({ type: 'generation', name: 'write_patch', agent: PA, parentId: pa.id, startTime: s = p, endTime: p = s + j(10.5), model: 'claude-opus-5-5', tokens: { in: ji(5210), out: ji(760) },
+    input: [{ role: 'system', content: 'Write the smallest correct patch. Match the project style. Do not change public behaviour.' }, { role: 'user', content: 'Replace regex= with pattern= in the tutorial010 examples and update their test. Leave tests/test_regex_deprecated_params.py as it is.' }],
+    output: '3 files changed, +6 −6\n• docs_src/query_params_str_validations/tutorial010_py310.py: regex= → pattern=\n• docs_src/query_params_str_validations/tutorial010_an_py310.py: regex= → pattern=\n• tests/test_tutorial/test_query_params_str_validations/test_tutorial010.py: expect pattern in the OpenAPI schema',
+    meta: { narr: 'Patch Author writes the change: two examples switch to pattern= and their test is updated.' } });
+  p += 0.3;
+  add({ type: 'guardrail', name: 'diff_scope_check', agent: PA, parentId: pa.id, startTime: s = p, endTime: p = s + j(1.6),
+    input: { rule: 'patch touches only docs_src/ and tests/, no public API change' }, output: { verdict: 'pass', files: 3, public_api_changed: false },
+    meta: { verdict: 'pass', score: 1.0, rule: 'Docs-only fix must not change the public API', narr: 'Guardrail: the diff touches only docs and tests — pass.' } });
   p += 0.5;
-  const gate = add({ type: 'human', name: 'approve_renewal_discount', agent: PA, parentId: pa.id, startTime: p, endTime: null,
-    input: { proposal: '15% renewal discount, 12-month term + 2-day service credit', arr_impact_usd: -62700, policy: 'Discounts above 10% require Deal Desk approval', requested_by: PA },
-    meta: { sla: 60, title: 'Approve 15% renewal discount for ACME Logistics?', desc: 'Pricing Agent proposes 15% off the $418k renewal (\u2248 \u2212$62.7k ARR) plus a 2-day service credit. Policy ceiling without approval is 10%.', narr: 'Pricing Agent proposes a 15% renewal discount \u2014 the run is holding at the human gate for Deal Desk approval.' } });
+  const gate = add({ type: 'human', name: 'approve_open_pull_request', agent: PA, parentId: pa.id, startTime: p, endTime: null,
+    input: { action: 'open a pull request on github.com/fastapi/fastapi', branch: 'docs/query-pattern-example', files_changed: 3, policy: 'Agents may prepare changes but a person approves anything posted to a public repository' },
+    meta: { sla: 60, title: 'Open this pull request on fastapi/fastapi?', desc: 'Patch Author wants to publish a 3-file docs fix (+6 −6) as a public pull request. Posting to a public repository needs human approval.', narr: 'The patch is ready. The run is holding at the human gate: posting to a public repository needs a person’s approval.' } });
 
   function resume(tR, approved, by) {
     const before = B.events.length;
     let q = tR + 0.5;
     if (approved) {
-      add({ type: 'generation', name: 'draft_offer_letter', agent: PA, parentId: pa.id, startTime: s = q, endTime: q = s + j(6), model: 'claude-sonnet-5', tokens: { in: ji(3100), out: ji(520) },
-        input: 'Draft the retention offer section: 15% on 12-month renewal + 2-day service credit, valid 14 days.',
-        output: 'As an apology for the disruption at Frankfurt-02, we\u2019re crediting two days of service and offering 15% off your 12-month renewal if signed within 14 days.',
-        meta: { narr: 'Approved \u2014 Pricing Agent drafts the offer: 15% on renewal plus a 2-day service credit.' } });
+      add({ type: 'tool', name: 'open_pull_request', agent: PA, parentId: pa.id, startTime: s = q, endTime: q = s + j(2.4),
+        input: { base: 'master', head: 'docs/query-pattern-example', title: '📝 Use pattern= instead of deprecated regex= in Query tutorial example' }, output: { ok: true, state: 'open', checks: 'queued' },
+        meta: { narr: 'Approved — Patch Author opens the pull request and CI checks start.' } });
     } else {
-      add({ type: 'generation', name: 'draft_standard_terms', agent: PA, parentId: pa.id, startTime: s = q, endTime: q = s + j(5), model: 'claude-sonnet-5', tokens: { in: ji(2900), out: ji(410) },
-        input: 'Offer rejected. Draft standard renewal terms with the 2-day service credit and flag the account for the account manager.',
-        output: 'We\u2019re crediting two days of service for the disruption. Your account manager will reach out this week to review renewal options.',
-        meta: { narr: 'Rejected \u2014 Pricing Agent falls back to standard terms with a service credit and flags the account manager.' } });
+      add({ type: 'tool', name: 'save_patch', agent: PA, parentId: pa.id, startTime: s = q, endTime: q = s + j(1.6),
+        input: { format: 'git format-patch', destination: 'drafts/needs-review' }, output: { ok: true, file: 'docs-query-pattern-example.patch' },
+        meta: { narr: 'Rejected — nothing is posted; the patch is saved for a person to review.' } });
     }
-    pa.endTime = q + 0.4; pa.output = approved ? 'Offer: 15% + 2-day credit (approved)' : 'Standard terms + credit (discount rejected)';
-    let f = Math.max(kb.endTime, ta.endTime, pa.endTime) + 0.6;
-    add({ type: 'generation', name: 'compose_reply', agent: O, parentId: orch.id, startTime: s = f, endTime: f = s + j(15.5), model: 'claude-opus-5-5', tokens: { in: ji(12400), out: ji(1180) },
-      input: [{ role: 'system', content: 'Compose the final customer reply from the specialist results. Empathetic, concrete, no internal jargon.' }, { role: 'user', content: '[KB resolution] [telemetry root cause] [offer] \u2026' }],
-      output: `Hi M. Keller \u2014 we found the cause of the Frankfurt-02 drops. Your socket's firmware (5.12.1) has a known keepalive issue that surfaces when CPU spikes during the 14:00 backup; all 19 drops this week match that pattern, and your ISP links are healthy.\n\nTonight at 22:00 CET we'll upgrade FRA-02 to 5.12.4, which fixes it; until then we've widened the BGP hold timer so tunnels ride through the spike. ${approved ? 'We\u2019re also crediting two days of service and offering 15% off your renewal.' : 'We\u2019re also crediting two days of service; your account manager will follow up on renewal.'}`,
-      meta: { narr: 'All three tracks are back. The Orchestrator composes the customer reply with claude-opus-4.5.' } });
-    add({ type: 'guardrail', name: 'pii_scan', agent: O, parentId: orch.id, startTime: s = f + 0.3, endTime: f = s + j(2), status: 'ok',
-      input: { target: 'compose_reply.output', checks: ['email', 'phone', 'iban', 'api_key', 'internal_hostnames'] }, output: { verdict: 'pass', findings: 0 },
-      meta: { verdict: 'pass', score: 1.0, rule: 'PII & secrets scan on outbound customer messages', narr: 'Guardrail: PII scan on the outbound reply \u2014 pass, nothing sensitive leaks.' } });
-    add({ type: 'evaluator', name: 'answer_quality', agent: O, parentId: orch.id, startTime: s = f + 0.3, endTime: f = s + j(4.2), model: 'claude-haiku-4-5', tokens: { in: ji(3400), out: ji(120) },
-      input: { rubric: ['root_cause', 'actionability', 'tone', 'policy_compliance'] }, output: { score: 0.92, rubric: { root_cause: 1.0, actionability: 0.95, tone: 0.9, policy_compliance: 0.85 } },
-      meta: { score: 0.92, verdict: 'pass', rule: 'LLM-as-judge \u00b7 answer quality \u2265 0.8', narr: 'The evaluator scores the answer 0.92 \u2014 clear root cause, concrete next steps.' } });
-    orch.endTime = f + 0.6; orch.output = 'Reply sent to customer (quality 0.92).';
+    pa.endTime = q + 0.4; pa.output = approved ? 'Pull request opened (checks queued)' : 'Patch saved locally, not posted';
+    let f = Math.max(cs.endTime, tr.endTime, pa.endTime) + 0.6;
+    add({ type: 'generation', name: 'compose_issue_reply', agent: O, parentId: orch.id, startTime: s = f, endTime: f = s + j(12.5), model: 'claude-opus-5-5', tokens: { in: ji(9800), out: ji(640) },
+      input: [{ role: 'system', content: 'Write a short, friendly reply on the issue. Credit the reporter. No internal jargon.' }, { role: 'user', content: '[scout summary] [test results] [patch] …' }],
+      output: `Thanks for the report! You're right: the tutorial010 examples still pass regex=, which FastAPI now maps to pattern= with a DeprecationWarning. ${approved ? 'A pull request switches both examples to pattern=; the deprecated argument keeps working and stays covered by its existing test.' : 'A fix is prepared and waiting for a maintainer to review before it is posted.'} Until then, using pattern= in your own code removes the warning.`,
+      meta: { narr: 'All three tracks are back. The Maintainer Bot drafts a friendly reply on the issue.' } });
+    add({ type: 'guardrail', name: 'secrets_scan', agent: O, parentId: orch.id, startTime: s = f + 0.3, endTime: f = s + j(2), status: 'ok',
+      input: { target: ['compose_issue_reply.output', 'patch'], checks: ['api_key', 'token', 'email', 'private_path'] }, output: { verdict: 'pass', findings: 0 },
+      meta: { verdict: 'pass', score: 1.0, rule: 'Secrets scan on everything posted publicly', narr: 'Guardrail: secrets scan on the reply and the patch — pass.' } });
+    add({ type: 'evaluator', name: 'review_quality', agent: O, parentId: orch.id, startTime: s = f + 0.3, endTime: f = s + j(4.2), model: 'claude-haiku-4-5', tokens: { in: ji(3100), out: ji(120) },
+      input: { rubric: ['correctness', 'minimal_diff', 'tone', 'tests'] }, output: { score: 0.94, rubric: { correctness: 1.0, minimal_diff: 0.95, tone: 0.9, tests: 0.9 } },
+      meta: { score: 0.94, verdict: 'pass', rule: 'LLM-as-judge · review quality ≥ 0.8', narr: 'The evaluator scores the work 0.94: correct, minimal, and tested.' } });
+    orch.endTime = f + 0.6; orch.output = approved ? 'Reply posted, pull request open (quality 0.94).' : 'Reply drafted, patch awaiting review.';
     return B.events.slice(before);
   }
-  return { key: 'support', title: 'Enterprise support ticket #48213', events: B.events, gate, resume };
+  return { key: 'support', title: 'Open-source issue → pull request · fastapi', events: B.events, gate, resume };
 }
 
 function scenarioResearch(seed) {
   const B = builder('rsr', seed); const { j, ji, add } = B;
-  const L = 'Lead Researcher', W = 'Web Scout', D = 'Data Analyst', R = 'Report Writer';
-  const lead = add({ type: 'agent', name: L, agent: L, startTime: 0, endTime: null, input: 'Brief: \u201cSASE market in 2026 \u2014 share, growth drivers, and where we win.\u201d Client-ready, 2 pages, cited.', meta: { role: 'Plans the research and signs off the report', narr: 'A research brief arrives: SASE market in 2026 \u2014 share, drivers, where we win. Client-ready and cited.' } });
+  const L = 'Lead Researcher', W = 'Web Scout', D = 'Repo Analyst', R = 'Report Writer';
+  const lead = add({ type: 'agent', name: L, agent: L, startTime: 0, endTime: null, input: 'Brief: “What changed in FastAPI recently, and what should our team check before upgrading?” 2 pages, cited.', meta: { role: 'Plans the research and signs off the report', narr: 'A research brief arrives: what changed in FastAPI recently, and what to check before upgrading. Two pages, cited.' } });
   let t = 0.8, s;
-  add({ type: 'generation', name: 'plan_research', agent: L, parentId: lead.id, startTime: s = t, endTime: t = s + j(5), model: 'claude-opus-5-5', tokens: { in: ji(1680), out: ji(520) },
-    input: 'Plan the research. Assign web research, internal data analysis and writing.', output: { steps: ['Web Scout: market size & share 2026', 'Data Analyst: our win/loss data from CRM', 'Report Writer: 2-page cited brief'] },
-    meta: { narr: 'The Lead Researcher plans three tracks: web research, internal win/loss data, and a writer.' } });
+  add({ type: 'generation', name: 'plan_research', agent: L, parentId: lead.id, startTime: s = t, endTime: t = s + j(5), model: 'claude-opus-5-5', tokens: { in: ji(1540), out: ji(480) },
+    input: 'Plan the research. Assign release-notes research, repository analysis and writing.', output: { steps: ['Web Scout: official release notes', 'Repo Analyst: what the last 500 commits touched', 'Report Writer: 2-page cited upgrade guide'] },
+    meta: { narr: 'The Lead Researcher plans three tracks: release notes, repository history, and a writer.' } });
   const d0 = t + 0.5;
-  const w = add({ type: 'agent', name: W, agent: W, parentId: lead.id, startTime: d0, endTime: null, meta: { role: 'Searches and reads the public web', narr: 'Web Scout and Data Analyst launch in parallel.' } });
-  const d = add({ type: 'agent', name: D, agent: D, parentId: lead.id, startTime: d0 + 0.3, endTime: null, meta: { role: 'Pulls internal CRM data and runs analysis', narr: '' } });
+  const w = add({ type: 'agent', name: W, agent: W, parentId: lead.id, startTime: d0, endTime: null, meta: { role: 'Searches and reads the public web', narr: 'Web Scout and Repo Analyst launch in parallel.' } });
+  const d = add({ type: 'agent', name: D, agent: D, parentId: lead.id, startTime: d0 + 0.3, endTime: null, meta: { role: 'Reads git history and runs analysis', narr: '' } });
   let a = d0 + 0.6;
-  const qs = ['SASE market share 2026', 'SASE market share 2026 report', 'sase market share 2026'];
+  const qs = ['fastapi release notes', 'fastapi latest release notes', 'fastapi release notes latest'];
   qs.forEach((q, i) => {
     add({ type: 'tool', name: 'web_search', agent: W, parentId: w.id, startTime: s = a, endTime: a = s + j(2.4),
-      input: { query: q, num_results: 8 }, output: { results: [{ title: 'SASE Market Size & Share 2026', url: 'https://example-analyst.com/sase-2026' }, { title: 'Top SASE vendors ranked', url: 'https://example-news.com/sase-ranked' }, { title: 'SSE vs SASE explained', url: 'https://example-blog.com/sse-sase' }], total: 8 },
-      meta: { narr: i === 0 ? 'Web Scout searches \u201cSASE market share 2026\u201d.' : i === 1 ? 'Web Scout searches again \u2014 \u201cSASE market share 2026 report\u201d \u2014 nearly the same query.' : 'A third near-identical search. The scout is looping on the same results.' } });
+      input: { query: q, num_results: 8 }, output: { results: [{ title: 'Release Notes - FastAPI', url: 'https://fastapi.tiangolo.com/release-notes/' }, { title: 'Releases · fastapi/fastapi', url: 'https://github.com/fastapi/fastapi/releases' }, { title: 'fastapi · PyPI', url: 'https://pypi.org/project/fastapi/' }], total: 8 },
+      meta: { narr: i === 0 ? 'Web Scout searches “fastapi release notes”.' : i === 1 ? 'Web Scout searches again with nearly the same words.' : 'A third near-identical search. The scout is looping on the same results.' } });
     a += j(0.3);
-    add({ type: 'generation', name: 'triage_results', agent: W, parentId: w.id, startTime: s = a, endTime: a = s + j(2.8), model: 'claude-haiku-4-5', tokens: { in: ji(1900), out: ji(160) },
-      input: 'Are these results sufficient to answer: market share 2026?', output: i < 2 ? 'Insufficient \u2014 no primary numbers. Refine the query.' : 'Same 8 results. Proceed to fetch the analyst page directly.', meta: { narr: '' } });
+    add({ type: 'generation', name: 'triage_results', agent: W, parentId: w.id, startTime: s = a, endTime: a = s + j(2.8), model: 'claude-haiku-4-5', tokens: { in: ji(1800), out: ji(150) },
+      input: 'Are these results enough to list recent changes?', output: i < 2 ? 'Only titles, no details. Refine the query.' : 'Same results again. Fetch the release API directly.', meta: { narr: '' } });
     a += j(0.3);
   });
   const f1 = add({ type: 'tool', name: 'fetch_url', agent: W, parentId: w.id, startTime: s = a, endTime: a = s + j(1.4), status: 'error',
-    input: { url: 'https://example-analyst.com/sase-2026' }, output: { error: 'HTTP 403', message: 'Forbidden \u2014 paywalled content' }, meta: { narr: 'Web Scout fetches the analyst report\u2026' } });
-  add({ type: 'error', name: 'HTTP 403 Forbidden', agent: W, parentId: f1.id, startTime: a, endTime: a + 0.25, status: 'error', output: { message: 'fetch_url \u2192 403 Forbidden (paywall)', retryable: false }, meta: { narr: 'fetch_url hit a 403 paywall \u2014 Web Scout falls back to an open source.' } });
+    input: { url: 'https://api.github.com/repos/fastapi/fastapi/releases?per_page=20' }, output: { error: 'HTTP 403', message: 'API rate limit exceeded for unauthenticated requests' }, meta: { narr: 'Web Scout calls the GitHub releases API…' } });
+  add({ type: 'error', name: 'HTTP 403 rate limit', agent: W, parentId: f1.id, startTime: a, endTime: a + 0.25, status: 'error', output: { message: 'fetch_url → 403 (GitHub API rate limit, unauthenticated)', retryable: false }, meta: { narr: 'The GitHub API refuses: rate limit for unauthenticated calls. Web Scout falls back to the docs site.' } });
   a += j(0.8);
   add({ type: 'tool', name: 'fetch_url', agent: W, parentId: w.id, startTime: s = a, endTime: a = s + j(2.2),
-    input: { url: 'https://example-news.com/sase-ranked' }, output: { chars: 18422, title: 'Top SASE vendors ranked', excerpt: 'The SASE market reached an estimated $11.6B in 2026, growing 24% YoY\u2026' }, meta: { narr: 'The fallback source loads: an $11.6B market growing 24% year over year.' } });
+    input: { url: 'https://fastapi.tiangolo.com/release-notes/' }, output: { chars: 48210, title: 'Release Notes - FastAPI', sections: ['Latest Changes', 'Features', 'Fixes', 'Refactors', 'Docs', 'Translations', 'Internal'] }, meta: { narr: 'The official release notes page loads.' } });
   a += j(0.4);
-  add({ type: 'generation', name: 'extract_findings', agent: W, parentId: w.id, startTime: s = a, endTime: a = s + j(8), model: 'claude-sonnet-5', tokens: { in: ji(8800), out: ji(700) },
-    input: 'Extract market figures with citations.', output: '\u2022 Market \u2248 $11.6B (2026), +24% YoY [2]\n\u2022 Top 3 vendors hold ~52% share [2]\n\u2022 Drivers: hybrid work, SD-WAN refresh, AI traffic inspection [2][3]', meta: { narr: 'Web Scout extracts figures with citations.' } });
+  add({ type: 'generation', name: 'extract_findings', agent: W, parentId: w.id, startTime: s = a, endTime: a = s + j(8), model: 'claude-sonnet-5', tokens: { in: ji(9400), out: ji(640) },
+    input: 'Extract upgrade-relevant changes with citations.', output: '• Releases group changes into Features, Fixes, Refactors, Docs, Translations and Internal [1]\n• Breaking changes and deprecations are called out per release [1]\n• Pin an exact version and read each release between yours and the target [1][2]', meta: { narr: 'Web Scout extracts what matters for an upgrade, with citations.' } });
   w.endTime = a + 0.4;
 
   let b = d0 + 0.9;
-  add({ type: 'retriever', name: 'crm_winloss', agent: D, parentId: d.id, startTime: s = b, endTime: b = s + j(3), model: 'text-embedding-3-small', tokens: { in: 30, out: 0 },
-    input: { index: 'crm-opportunities', query: 'closed SASE deals 2025-2026 win/loss reasons', top_k: 40 }, output: { docs: 40, won: 23, lost: 17 }, meta: { docs: 40, narr: 'Data Analyst pulls 40 closed SASE deals from the CRM vault.' } });
+  add({ type: 'retriever', name: 'git_log', agent: D, parentId: d.id, startTime: s = b, endTime: b = s + j(3), model: 'text-embedding-3-small', tokens: { in: 30, out: 0 },
+    input: { repo: 'fastapi/fastapi', branch: 'master', max_commits: 500 }, output: { commits: 500, files_touched: 1210 }, meta: { docs: 500, narr: 'Repo Analyst reads the 500 most recent commits.' } });
   b += j(0.4);
   add({ type: 'tool', name: 'python_exec', agent: D, parentId: d.id, startTime: s = b, endTime: b = s + j(4.5),
-    input: 'df.groupby("loss_reason").size().sort_values()', output: { win_rate: 0.575, top_win_reason: 'single-pass architecture', top_loss_reason: 'price (41%)' }, meta: { narr: 'Data Analyst runs the numbers: 57.5% win rate; price is the top loss reason.' } });
+    input: 'changes.groupby("path").size().sort_values(ascending=False).head(5)', output: { 'fastapi/__init__.py': 25, 'fastapi/routing.py': 18, '.github/workflows/test.yml': 15, 'README.md': 14, '.github/workflows/pre-commit.yml': 11 }, meta: { narr: 'Repo Analyst counts which files changed most: fastapi/__init__.py (25), fastapi/routing.py (18).' } });
   b += j(0.4);
-  add({ type: 'generation', name: 'interpret_winloss', agent: D, parentId: d.id, startTime: s = b, endTime: b = s + j(7.5), model: 'claude-sonnet-5', tokens: { in: ji(4300), out: ji(540) },
-    input: 'Interpret win/loss stats for the brief.', output: 'We win on unified architecture and time-to-deploy; we lose on price in sub-500-seat deals.', meta: { narr: '' } });
+  add({ type: 'generation', name: 'interpret_history', agent: D, parentId: d.id, startTime: s = b, endTime: b = s + j(7.5), model: 'claude-sonnet-5', tokens: { in: ji(4100), out: ji(520) },
+    input: 'Interpret the change counts for an upgrade guide.', output: '__init__.py changes are mostly version bumps. routing.py is the most-edited core module, so routing, dependencies and lifespan behaviour deserve regression tests before upgrading. Most workflow changes are automated dependency updates.', meta: { narr: '' } });
   d.endTime = b + 0.4;
 
   const r0 = Math.max(w.endTime, d.endTime) + 0.4;
-  const r = add({ type: 'agent', name: R, agent: R, parentId: lead.id, startTime: r0, endTime: null, meta: { role: 'Writes the client brief and fixes citations', narr: 'Both tracks report in; the Report Writer takes over.' } });
+  const r = add({ type: 'agent', name: R, agent: R, parentId: lead.id, startTime: r0, endTime: null, meta: { role: 'Writes the guide and fixes citations', narr: 'Both tracks report in; the Report Writer takes over.' } });
   let c = r0 + 0.5;
-  add({ type: 'generation', name: 'draft_report', agent: R, parentId: r.id, startTime: s = c, endTime: c = s + j(13), model: 'claude-sonnet-5', tokens: { in: ji(11200), out: ji(1850) },
-    input: 'Write a 2-page client brief with citations.', output: '# SASE in 2026\nThe market reached ~$11.6B \u2026 We win where customers value one platform \u2026 (2 claims without citations)', meta: { narr: 'The Report Writer drafts the two-page brief.' } });
+  add({ type: 'generation', name: 'draft_report', agent: R, parentId: r.id, startTime: s = c, endTime: c = s + j(13), model: 'claude-sonnet-5', tokens: { in: ji(10800), out: ji(1720) },
+    input: 'Write a 2-page upgrade guide with citations.', output: '# Upgrading FastAPI\nRead every release between your version and the target … routing.py changed in 18 of the last 500 commits … (2 claims without citations)', meta: { narr: 'The Report Writer drafts the two-page guide.' } });
   c += 0.3;
   add({ type: 'guardrail', name: 'citation_check', agent: R, parentId: r.id, startTime: s = c, endTime: c = s + j(2.2), status: 'blocked',
-    input: { rule: 'every numeric claim must cite a source' }, output: { verdict: 'block', uncited_claims: ['\u201ctop 3 hold ~52%\u201d (para 2)', '\u201c24% YoY\u201d (summary)'] },
-    meta: { verdict: 'block', score: 0.71, rule: 'Every numeric claim must cite a source', narr: 'Guardrail blocks the draft: two numeric claims have no citation.' } });
+    input: { rule: 'every factual claim must cite a source' }, output: { verdict: 'block', uncited_claims: ['“routing.py changed in 18 of 500 commits” (para 2)', '“deprecations are called out per release” (summary)'] },
+    meta: { verdict: 'block', score: 0.71, rule: 'Every factual claim must cite a source', narr: 'Guardrail blocks the draft: two claims have no citation.' } });
   c += 0.3;
-  add({ type: 'generation', name: 'revise_citations', agent: R, parentId: r.id, startTime: s = c, endTime: c = s + j(6), model: 'claude-sonnet-5', tokens: { in: ji(6400), out: ji(380) },
-    input: 'Add citations for the flagged claims.', output: 'Added [2] to both claims.', meta: { narr: 'The writer adds the missing citations.' } });
+  add({ type: 'generation', name: 'revise_citations', agent: R, parentId: r.id, startTime: s = c, endTime: c = s + j(6), model: 'claude-sonnet-5', tokens: { in: ji(6100), out: ji(360) },
+    input: 'Add citations for the flagged claims.', output: 'Cited the git history analysis and the release notes page.', meta: { narr: 'The writer adds the missing citations.' } });
   c += 0.3;
   add({ type: 'guardrail', name: 'citation_check', agent: R, parentId: r.id, startTime: s = c, endTime: c = s + j(1.8),
-    input: { rule: 'every numeric claim must cite a source' }, output: { verdict: 'pass', uncited_claims: [] }, meta: { verdict: 'pass', score: 1.0, rule: 'Every numeric claim must cite a source', narr: 'Citation check passes on the second attempt.' } });
+    input: { rule: 'every factual claim must cite a source' }, output: { verdict: 'pass', uncited_claims: [] }, meta: { verdict: 'pass', score: 1.0, rule: 'Every factual claim must cite a source', narr: 'Citation check passes on the second attempt.' } });
   c += 0.4;
-  const gate = add({ type: 'human', name: 'approve_send_to_client', agent: R, parentId: r.id, startTime: c, endTime: null,
-    input: { action: 'email report to client (Northwind Capital)', attachments: ['SASE-2026-brief.pdf'] },
-    meta: { sla: 60, title: 'Send the SASE brief to Northwind Capital?', desc: 'Report Writer wants to email the 2-page cited brief to the client. It includes internal win/loss figures (57.5% win rate).', narr: 'The brief is ready. The run holds for a human to approve sending it to the client.' } });
+  const gate = add({ type: 'human', name: 'approve_publish_guide', agent: R, parentId: r.id, startTime: c, endTime: null,
+    input: { action: 'publish the upgrade guide to the team wiki', attachments: ['fastapi-upgrade-guide.md'] },
+    meta: { sla: 60, title: 'Publish the FastAPI upgrade guide to the team wiki?', desc: 'Report Writer wants to publish the 2-page cited guide. Note: the web research repeated one query three times.', narr: 'The guide is ready. The run holds for a person to approve publishing it.' } });
 
   function resume(tR, approved) {
     const before = B.events.length; let q = tR + 0.4;
-    add({ type: 'tool', name: approved ? 'send_email' : 'archive_draft', agent: R, parentId: r.id, startTime: s = q, endTime: q = s + j(1.8),
-      input: approved ? { to: 'research@northwind.example', subject: 'SASE in 2026 \u2014 brief' } : { folder: 'drafts/needs-review' }, output: { ok: true },
-      meta: { narr: approved ? 'Approved \u2014 the brief is emailed to the client.' : 'Rejected \u2014 the draft is archived for review; nothing is sent.' } });
+    add({ type: 'tool', name: approved ? 'publish_wiki_page' : 'archive_draft', agent: R, parentId: r.id, startTime: s = q, endTime: q = s + j(1.8),
+      input: approved ? { space: 'engineering', title: 'Upgrading FastAPI' } : { folder: 'drafts/needs-review' }, output: { ok: true },
+      meta: { narr: approved ? 'Approved — the guide is published to the wiki.' : 'Rejected — the draft is archived for review; nothing is published.' } });
     r.endTime = q + 0.3;
     q += 0.5;
-    add({ type: 'evaluator', name: 'factuality', agent: L, parentId: lead.id, startTime: s = q, endTime: q = s + j(3.5), model: 'claude-haiku-4-5', tokens: { in: ji(5200), out: ji(140) },
-      input: { rubric: ['claims_supported', 'coverage', 'clarity'] }, output: { score: 0.81, rubric: { claims_supported: 0.78, coverage: 0.8, clarity: 0.9 } },
-      meta: { score: 0.81, verdict: 'pass', rule: 'LLM-as-judge \u00b7 factuality \u2265 0.75', narr: 'The evaluator scores factuality 0.81 \u2014 passing, but the sourcing is thin.' } });
+    add({ type: 'evaluator', name: 'factuality', agent: L, parentId: lead.id, startTime: s = q, endTime: q = s + j(3.5), model: 'claude-haiku-4-5', tokens: { in: ji(5000), out: ji(140) },
+      input: { rubric: ['claims_supported', 'coverage', 'clarity'] }, output: { score: 0.84, rubric: { claims_supported: 0.86, coverage: 0.78, clarity: 0.9 } },
+      meta: { score: 0.84, verdict: 'pass', rule: 'LLM-as-judge · factuality ≥ 0.75', narr: 'The evaluator scores factuality 0.84 — passing, with thin coverage of individual releases.' } });
     q += 0.3;
-    add({ type: 'generation', name: 'wrap_up', agent: L, parentId: lead.id, startTime: s = q, endTime: q = s + j(4), model: 'claude-haiku-4-5', tokens: { in: ji(2100), out: ji(260) },
-      input: 'Summarize run outcome for the requester.', output: approved ? 'Brief sent. Note: web research repeated one query 3\u00d7; consider a query-dedup policy.' : 'Brief archived pending review.', meta: { narr: 'The Lead Researcher closes out the run.' } });
+    add({ type: 'generation', name: 'wrap_up', agent: L, parentId: lead.id, startTime: s = q, endTime: q = s + j(4), model: 'claude-haiku-4-5', tokens: { in: ji(2000), out: ji(240) },
+      input: 'Summarize run outcome for the requester.', output: approved ? 'Guide published. Note: web research repeated one query 3× and hit the GitHub rate limit; use an authenticated token and a query-dedup policy.' : 'Guide archived pending review.', meta: { narr: 'The Lead Researcher closes out the run.' } });
     lead.endTime = q + 0.5;
     return B.events.slice(before);
   }
-  return { key: 'research', title: 'Research & report \u00b7 SASE 2026', events: B.events, gate, resume };
+  return { key: 'research', title: 'Research & report · FastAPI upgrade guide', events: B.events, gate, resume };
 }
 const SCENARIOS = { support: scenarioSupport, research: scenarioResearch };
 

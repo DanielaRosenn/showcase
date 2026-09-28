@@ -40,4 +40,4 @@ The demo is a scan of [fastapi/fastapi](https://github.com/fastapi/fastapi) and 
 
 ## Agent Mission Control
 
-The app ships with bundled sample traces of a multi-agent run. It does not use any external data.
+The app ships with two simulated multi-agent runs set in the public [fastapi/fastapi](https://github.com/fastapi/fastapi) repository (an issue turned into a pull request, and an upgrade-research report). They are illustrations, not records of real runs. The app does not fetch any external data.
