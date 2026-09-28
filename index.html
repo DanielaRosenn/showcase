@@ -4,20 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Built with Claude Opus 5.5 · The Observatory</title>
-<meta name="description" content="Three instruments built in one day with Claude Opus 5.5: a live planetary globe, a 3D command centre for multi-agent AI runs, and a galaxy of source code.">
+<meta name="description" content="Four instruments built in one day with Claude Opus 5.5: a live planetary globe, a 3D command centre for multi-agent AI runs, a galaxy of source code, and 5,000 years of history on a globe.">
 <meta name="theme-color" content="#05060a">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Built with Claude Opus 5.5 · The Observatory">
-<meta property="og:description" content="A live planetary globe, a 3D command centre for multi-agent AI runs, and a galaxy of source code. Built in one day with Claude Opus 5.5.">
+<meta property="og:description" content="A live planetary globe, a 3D command centre for multi-agent AI runs, a galaxy of source code, and a globe of world history. Built in one day with Claude Opus 5.5.">
 <meta name="twitter:card" content="summary_large_image">
 <meta property="og:url" content="https://danielarosenn.github.io/showcase/">
 <meta property="og:image" content="https://danielarosenn.github.io/showcase/og.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="The Observatory: three apps built with Claude Opus 5.5">
+<meta property="og:image:alt" content="The Observatory: four apps built with Claude Opus 5.5">
 <meta name="twitter:image" content="https://danielarosenn.github.io/showcase/og.jpg">
 <meta name="twitter:title" content="Built with Claude Opus 5.5 · The Observatory">
-<meta name="twitter:description" content="A live planetary globe, a 3D command centre for multi-agent AI runs, and a galaxy of source code.">
+<meta name="twitter:description" content="A live planetary globe, a 3D command centre for multi-agent AI runs, a galaxy of source code, and a globe of world history.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2305060a'/%3E%3Ccircle cx='16' cy='16' r='8.5' fill='none' stroke='%23e8a27c' stroke-width='1.6'/%3E%3Cellipse cx='16' cy='16' rx='13' ry='4.2' fill='none' stroke='%237fd3f5' stroke-width='1.2' transform='rotate(-22 16 16)'/%3E%3Ccircle cx='16' cy='16' r='2.2' fill='%23f3eee6'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,7 +26,7 @@
 :root{
   --bg:#05060a; --ink:#f3eee6; --muted:#9a9aa6; --faint:#5d5e6b;
   --line:rgba(243,238,230,.10); --line2:rgba(243,238,230,.18);
-  --clay:#e8a27c; --cyan:#7fd3f5; --amber:#ffb547; --violet:#b9a3ff;
+  --clay:#e8a27c; --cyan:#7fd3f5; --amber:#ffb547; --violet:#b9a3ff; --gold:#e0b25c;
   --serif:"Instrument Serif",Georgia,serif; --mono:"JetBrains Mono",ui-monospace,Consolas,monospace; --ui:"Hanken Grotesk",system-ui,sans-serif;
   color-scheme:dark;
 }
@@ -71,6 +71,8 @@ h1 .v{white-space:nowrap;font-style:italic;background:linear-gradient(100deg,#f3
 .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:18px}
 .card{grid-column:span 6;position:relative;display:flex;flex-direction:column;text-decoration:none;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.01));transition:border-color .35s ease,transform .5s cubic-bezier(.2,.8,.2,1),box-shadow .5s ease;isolation:isolate}
 .card.feature{grid-column:span 12;flex-direction:row;min-height:420px}
+.card.feature.rev{flex-direction:row-reverse}
+.card.feature.rev .body{border-left:0;border-right:1px solid var(--line)}
 .card:hover,.card:focus-visible{border-color:var(--line2);transform:translateY(-3px);box-shadow:0 30px 80px -40px var(--glow,rgba(232,162,124,.45));outline:none}
 .card:focus-visible{border-color:var(--c)}
 .view{position:relative;aspect-ratio:16/10;background:radial-gradient(90% 90% at 50% 45%,rgba(255,255,255,.03),transparent 70%);overflow:hidden}
@@ -113,9 +115,9 @@ footer a:hover{border-color:var(--clay)}
 
 @media (max-width:900px){
   .card,.card.feature{grid-column:span 12}
-  .card.feature{flex-direction:column;min-height:0}
+  .card.feature,.card.feature.rev{flex-direction:column;min-height:0}
   .card.feature .view{aspect-ratio:16/10;min-height:0;flex:none}
-  .card.feature .body{border-left:0;border-top:1px solid var(--line);padding:22px 24px 24px}
+  .card.feature .body,.card.feature.rev .body{border-left:0;border-right:0;border-top:1px solid var(--line);padding:22px 24px 24px}
   .colophon{grid-template-columns:1fr}
 }
 @media (max-width:520px){
@@ -145,10 +147,10 @@ footer a:hover{border-color:var(--clay)}
   </header>
 
   <section class="hero">
-    <div class="kicker rv">Three instruments · one day</div>
+    <div class="kicker rv">Four instruments · one day</div>
     <h1 class="rv">Built with <em>Claude</em> <span class="v">Opus 5.5</span></h1>
-    <p class="lede rv">Each of these was designed and written with <b>Claude Opus 5.5</b>: a live globe of the planet’s signals, a command centre for watching AI agents work, and a galaxy you can fly through made from source code. They run in your browser, with no sign-in.</p>
-    <div class="meta rv"><span><b>03</b>instruments</span><span><b>5</b>live public data feeds</span><span><b>0</b>build steps · plain HTML</span></div>
+    <p class="lede rv">Each of these was designed and written with <b>Claude Opus 5.5</b>: a live globe of the planet’s signals, a command centre for watching AI agents work, a galaxy you can fly through made from source code, and five thousand years of history on one planet. They run in your browser, with no sign-in.</p>
+    <div class="meta rv"><span><b>04</b>instruments</span><span><b>5</b>live public data feeds</span><span><b>0</b>build steps · plain HTML</span></div>
   </section>
 
   <div class="sec-h rv"><span>Instruments</span><span>Open one ↓</span></div>
@@ -195,6 +197,20 @@ footer a:hover{border-color:var(--clay)}
         <span class="go"><span class="ar" aria-hidden="true">→</span>Fly the galaxy</span>
       </div>
     </a>
+
+    <a class="card feature rev rv" href="https://danielarosenn.github.io/anno-mundi/" style="--c:var(--gold);--glow:rgba(224,178,92,.35)">
+      <div class="view">
+        <canvas data-teaser="history" aria-hidden="true"></canvas>
+        <div class="hud"><span class="live"><i></i>650 events</span><span>3200 BCE → 2025</span></div>
+      </div>
+      <div class="body">
+        <div class="num">04 · HISTORY</div>
+        <h2>Anno <em>Mundi</em></h2>
+        <p class="what">Five thousand years of history on one planet. Scrub a timeline from the first writing in Sumer to today and watch wars, elections, revolutions and crashes ignite where they happened, with historical borders, voyages drawn across the oceans and nine guided stories.</p>
+        <p class="data"><b>DATA</b>650 curated events · live Wikipedia images &amp; extracts · historical-basemaps borders</p>
+        <span class="go"><span class="ar" aria-hidden="true">→</span>Travel through time</span>
+      </div>
+    </a>
   </main>
 
   <section class="colophon">
@@ -209,7 +225,7 @@ footer a:hover{border-color:var(--clay)}
   </section>
 
   <footer>
-    <span>Built in one day with Claude Opus 5.5 · Data: USGS, NASA EONET &amp; GIBS, Where the ISS at?, Open-Meteo</span>
+    <span>Built in one day with Claude Opus 5.5 · Data: USGS, NASA EONET &amp; GIBS, Where the ISS at?, Open-Meteo, Wikipedia</span>
     <a href="CREDITS.md">Credits &amp; licences</a>
   </footer>
 </div>
@@ -348,7 +364,38 @@ footer a:hover{border-color:var(--clay)}
     ctx.globalAlpha = 1;
   }
 
-  const T = { globe, mission, galaxy };
+  /* 04 · history: sepia globe, gold graticule, events igniting as a year counter sweeps 3200 BCE to 2025 */
+  const HEV = [[31.3, 45.6, -3200], [30, 31.2, -2560], [37.97, 23.7, -480], [41.9, 12.5, -27], [34.3, 108.9, -221], [21.4, 39.8, 622], [47, 103, 1206], [41, 29, 1453], [24, -76, 1492], [-13.2, -72.5, 1450], [52.4, 13.4, 1648], [48.86, 2.35, 1789], [19, -72, 1791], [-34, 151, 1788], [-12, -77, 1824], [51.5, 0, 1848], [44, 18.4, 1914], [59.9, 30.3, 1917], [40.7, -74, 1929], [49.3, -0.6, 1944], [35.7, 139.7, 1945], [28.6, 77.2, 1947], [23.1, -82.4, 1962], [52.5, 13.4, 1989], [-26, 28, 1994], [37.8, -122.4, 2007], [30.6, 114.3, 2020], [50.4, 30.5, 2022]];
+  const yearAt = f => f < .5 ? -3200 + f / .5 * 4700 : 1500 + (f - .5) / .5 * 525;
+  function history(ctx, w, h, t) {
+    const R = Math.min(w * .34, h * .42), cx = w * .5, cy = h * .5, rot = t * .1 - 1.2, tilt = -.4;
+    const proj = (lat, lon) => {
+      const la = lat * Math.PI / 180, lo = lon * Math.PI / 180 + rot;
+      const x = Math.cos(la) * Math.sin(lo), y = Math.sin(la), z = Math.cos(la) * Math.cos(lo);
+      return [cx + x * R, cy - (y * Math.cos(tilt) - z * Math.sin(tilt)) * R, y * Math.sin(tilt) + z * Math.cos(tilt)];
+    };
+    let g = ctx.createRadialGradient(cx, cy, R * .9, cx, cy, R * 1.3); g.addColorStop(0, 'rgba(224,178,92,.2)'); g.addColorStop(1, 'rgba(224,178,92,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R * 1.3, 0, 7); ctx.fill();
+    g = ctx.createRadialGradient(cx - R * .35, cy - R * .3, R * .1, cx, cy, R); g.addColorStop(0, '#3a2c1a'); g.addColorStop(1, '#0d0906');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill();
+    ctx.lineWidth = .7; ctx.strokeStyle = 'rgba(224,178,92,.2)';
+    const line = pts => { ctx.beginPath(); let pen = false; for (const [la, lo] of pts) { const [x, y, z] = proj(la, lo); if (z > 0) { pen ? ctx.lineTo(x, y) : ctx.moveTo(x, y); pen = true; } else pen = false; } ctx.stroke(); };
+    for (let lat = -60; lat <= 60; lat += 30) line(Array.from({ length: 73 }, (_, i) => [lat, i * 5 - 180]));
+    for (let lon = -180; lon < 180; lon += 30) line(Array.from({ length: 37 }, (_, i) => [i * 5 - 90, lon]));
+    const cyc = 14, f = (t % cyc) / cyc, Y = yearAt(Math.min(1, f * 1.08));
+    for (const [la, lo, yr] of HEV) {
+      if (yr > Y) continue; const [x, y, z] = proj(la, lo); if (z <= .02) continue;
+      const age = (Y - yr) / (f < .5 ? 400 : 40), fresh = Math.max(0, 1 - age);
+      if (fresh > 0) { ctx.strokeStyle = `rgba(255,${Math.round(150 + fresh * 60)},90,${fresh * z})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x, y, 2 + (1 - fresh) * 16, 0, 7); ctx.stroke(); }
+      ctx.fillStyle = `rgba(246,213,142,${(.35 + .6 * fresh) * z})`; ctx.beginPath(); ctx.arc(x, y, 1.6 + fresh * 1.4, 0, 7); ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(246,213,142,.4)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(cx, cy, R, Math.PI * .9, Math.PI * 1.75); ctx.stroke();
+    const yr = Math.round(Y), label = yr <= 0 ? (1 - yr) + ' BCE' : yr < 1000 ? yr + ' CE' : String(yr);
+    ctx.font = 'italic 400 ' + Math.round(Math.min(38, h * .1)) + 'px "Instrument Serif", Georgia, serif'; ctx.fillStyle = 'rgba(246,213,142,.9)'; ctx.textAlign = 'right';
+    ctx.fillText(label, w - 18, h - 18); ctx.textAlign = 'start';
+  }
+
+  const T = { globe, mission, galaxy, history };
   document.querySelectorAll('canvas[data-teaser]').forEach(cv => teaser(cv, T[cv.dataset.teaser]));
 })();
 </script>
