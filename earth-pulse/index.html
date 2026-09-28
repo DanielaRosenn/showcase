@@ -1,0 +1,1782 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Earth Pulse</title>
+<meta name="description" content="A live 3D globe of the planet's signals: USGS earthquakes, NASA EONET wildfires, volcanoes and storms with real satellite views from NASA GIBS, the ISS in orbit, and weather anywhere.">
+<meta name="theme-color" content="#02050d">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Earth Pulse · real-time planetary signals">
+<meta property="og:description" content="Live earthquakes, wildfires, volcanoes, storms and the ISS on a cinematic 3D globe, with real NASA satellite views of each event. Built with Claude Opus 5.5.">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Earth Pulse · real-time planetary signals">
+<meta name="twitter:description" content="Live earthquakes, wildfires, volcanoes, storms and the ISS on a cinematic 3D globe, with real NASA satellite views of each event.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%2302050d'/%3E%3Ccircle cx='20' cy='20' r='11' fill='none' stroke='%2339d0ff' stroke-width='2'/%3E%3Cpath d='M9 20h5l2.5-5 3.5 10 3-7 2 2h6' fill='none' stroke='%23e7f2ff' stroke-width='2' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@300;500;700&family=JetBrains+Mono:wght@400;500;700&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#02050d; --navy:#061228; --cyan:#39d0ff; --cyan-2:#8be6ff; --cyan-dim:rgba(57,208,255,.55);
+  --text:#e7f2ff; --muted:#8397b6; --faint:#4f6384;
+  --glass:rgba(8,20,42,.52); --glass-strong:rgba(8,18,38,.78); --stroke:rgba(140,210,255,.13); --stroke-2:rgba(140,210,255,.24);
+  --warm:#ffb347; --hot:#ff5d4a; --violet:#b479ff; --ice:#9ff3ff;
+  --r:14px; --gut:16px;
+  --display:"Unbounded",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace; --ui:"Hanken Grotesk",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);overflow:hidden}
+body{font-family:var(--ui);font-size:14px;-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+a{color:var(--cyan)}
+#stage{position:fixed;inset:0;background:radial-gradient(120% 90% at 60% 40%,#071430 0%,#02050d 60%)}
+#stage canvas{display:block;width:100%!important;height:100%!important;touch-action:none}
+.vignette{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.55) 100%)}
+.grain{position:fixed;inset:-50%;pointer-events:none;opacity:.05;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* ---------- glass ---------- */
+.glass{background:linear-gradient(180deg,rgba(18,40,78,.42),rgba(6,16,36,.58));border:1px solid var(--stroke);border-radius:var(--r);
+  backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);
+  box-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 20px 50px -20px rgba(0,0,0,.7)}
+.eyebrow{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.hud{transition:opacity .8s ease,transform .8s ease}
+
+/* ---------- top bar ---------- */
+#top{position:fixed;top:0;left:0;right:0;display:flex;align-items:flex-start;gap:20px;padding:18px 22px;pointer-events:none;z-index:5}
+#top > *{pointer-events:auto}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand-mark{width:34px;height:34px;flex:none;position:relative}
+.brand-mark svg{width:100%;height:100%}
+.wordmark{font-family:var(--display);font-weight:500;font-size:17px;letter-spacing:.32em;line-height:1;white-space:nowrap}
+.wordmark b{font-weight:700;color:var(--cyan)}
+.tagline{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.14em;margin-top:6px;white-space:nowrap}
+#stats{margin:0 auto;display:flex;padding:0;overflow:hidden}
+.stat{padding:10px 18px;min-width:118px;border-left:1px solid var(--stroke)}
+.stat:first-child{border-left:0}
+.stat .v{font-family:var(--mono);font-size:19px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:4px;white-space:nowrap}
+.stat .v small{font-size:11px;color:var(--muted);font-weight:400;margin-left:3px}
+.stat .v.accent{color:var(--cyan)}
+.right-top{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border-radius:999px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;white-space:nowrap}
+.badge .dot{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+.badge.live{color:#bff3ff}
+.badge.live .dot{background:#39ff9c;box-shadow:0 0 0 0 rgba(57,255,156,.6);animation:ping 1.8s infinite}
+.badge.snap{color:#ffe1b0}
+.badge.snap .dot{background:var(--warm)}
+@keyframes ping{0%{box-shadow:0 0 0 0 rgba(57,255,156,.55)}80%,100%{box-shadow:0 0 0 9px rgba(57,255,156,0)}}
+#utc{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.06em}
+
+/* ---------- side panels ---------- */
+#left{position:fixed;left:22px;top:96px;bottom:118px;width:336px;display:flex;flex-direction:column;z-index:4}
+#right{position:fixed;right:22px;top:96px;bottom:118px;width:300px;display:flex;flex-direction:column;gap:12px;z-index:4;overflow:auto;scrollbar-width:none}
+#right::-webkit-scrollbar{display:none}
+.panel-h{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px}
+.panel-h h2{margin:0;font-family:var(--display);font-weight:500;font-size:12px;letter-spacing:.2em;text-transform:uppercase}
+.chips{display:flex;gap:6px;padding:0 14px 12px;flex-wrap:wrap}
+.chip{font-family:var(--mono);font-size:10.5px;padding:5px 9px;border-radius:999px;border:1px solid var(--stroke);color:var(--muted);transition:all .2s}
+.chip:hover{color:var(--text);border-color:var(--stroke-2)}
+.chip.on{color:#021018;background:var(--cyan);border-color:var(--cyan)}
+#feed{flex:1;overflow:auto;padding:0 8px 10px;scrollbar-width:thin;scrollbar-color:rgba(140,210,255,.2) transparent;mask-image:linear-gradient(180deg,#000 92%,transparent)}
+.row{display:grid;grid-template-columns:40px 1fr auto;gap:10px;align-items:center;padding:9px 8px;border-radius:10px;cursor:pointer;transition:background .15s}
+.row:hover,.row:focus-visible{background:rgba(57,208,255,.07);outline:none}
+.row.sel{background:rgba(57,208,255,.12)}
+.glyph{width:40px;height:32px;border-radius:8px;display:grid;place-items:center;font-family:var(--mono);font-size:12.5px;font-weight:700;border:1px solid currentColor;background:color-mix(in srgb,currentColor 12%,transparent)}
+.glyph svg{width:16px;height:16px}
+.row .t{font-size:13px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .s{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .ago{font-family:var(--mono);font-size:10.5px;color:var(--faint);white-space:nowrap}
+.row.future{opacity:.28}
+.empty{padding:20px;color:var(--muted);font-size:13px;text-align:center}
+
+.card{padding:14px 16px}
+.card h3{margin:0 0 10px;font-family:var(--display);font-weight:500;font-size:11px;letter-spacing:.2em;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between}
+.toggles{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.tg{display:flex;align-items:center;gap:8px;padding:8px 9px;border-radius:9px;border:1px solid var(--stroke);font-size:12.5px;color:var(--muted);transition:all .2s;text-align:left}
+.tg .sw{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none;transition:all .2s}
+.tg.on{color:var(--text);border-color:var(--stroke-2);background:rgba(57,208,255,.06)}
+.tg.on .sw{background:var(--c,var(--cyan));box-shadow:0 0 10px var(--c,var(--cyan))}
+#brief{font-size:13.5px;line-height:1.55;color:#cfe0f5;min-height:60px}
+#brief .cursor{display:inline-block;width:6px;height:13px;background:var(--cyan);vertical-align:-2px;animation:blink 1s steps(2) infinite;margin-left:2px}
+@keyframes blink{50%{opacity:0}}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:9px;border:1px solid var(--stroke-2);font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--cyan-2);transition:all .2s;background:rgba(57,208,255,.05)}
+.btn:hover{background:rgba(57,208,255,.14);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.primary{background:var(--cyan);color:#021018;border-color:var(--cyan);font-weight:700}
+.btn.primary:hover{background:#7ee2ff}
+.ai-mark{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--muted)}
+.ai-mark i{width:6px;height:6px;border-radius:50%;background:linear-gradient(135deg,#39d0ff,#b479ff);box-shadow:0 0 8px #39d0ff}
+#ask{display:none;margin-top:12px;position:relative}
+#ask input{width:100%;background:rgba(2,8,20,.6);border:1px solid var(--stroke-2);border-radius:10px;padding:10px 38px 10px 12px;color:var(--text);font:13px var(--ui);outline:none;transition:border-color .2s}
+#ask input:focus{border-color:var(--cyan)}
+#ask button{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:7px;display:grid;place-items:center;color:var(--cyan)}
+#answer{margin-top:10px;font-size:13px;line-height:1.5;color:#cfe0f5;display:none}
+.iss-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin-bottom:12px}
+.kv .k{font-family:var(--mono);font-size:9.5px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase}
+.kv .v{font-family:var(--mono);font-size:14px;margin-top:3px;font-variant-numeric:tabular-nums}
+
+/* ---------- info card ---------- */
+#info{position:fixed;left:380px;top:96px;width:330px;padding:18px 18px 16px;z-index:6;opacity:0;transform:translateY(8px) scale(.98);pointer-events:none;transition:opacity .35s ease,transform .35s ease}
+#info.show{opacity:1;transform:none;pointer-events:auto}
+#info .close{position:absolute;right:10px;top:10px;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:var(--muted)}
+#info .close:hover{color:#fff;background:rgba(255,255,255,.06)}
+.info-kind{display:flex;gap:8px;align-items:center}
+.pill{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;padding:4px 8px;border-radius:999px;border:1px solid currentColor;text-transform:uppercase}
+.info-big{font-family:var(--display);font-weight:300;font-size:44px;letter-spacing:-.01em;margin:10px 0 2px;line-height:1}
+.info-big small{font-size:14px;font-weight:500;color:var(--muted);margin-left:6px;letter-spacing:.1em}
+.info-title{font-size:16px;font-weight:500;line-height:1.3;margin:6px 0 14px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;padding:12px 0;border-top:1px solid var(--stroke);border-bottom:1px solid var(--stroke)}
+.info-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.info-actions a{text-decoration:none}
+#explain{margin-top:12px;font-size:13px;line-height:1.55;color:#cfe0f5;display:none}
+.depthbar{height:4px;border-radius:2px;background:linear-gradient(90deg,#ffb847,#ff6b3a,#ff3f73,#c24dff,#6a73ff,#38d1ff);position:relative;margin-top:8px}
+.depthbar i{position:absolute;top:-3px;width:2px;height:10px;background:#fff;border-radius:1px;box-shadow:0 0 6px #fff}
+
+/* ---------- timeline ---------- */
+#timeline{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);width:min(760px,calc(100vw - 44px));padding:12px 16px 12px 12px;display:grid;grid-template-columns:auto auto 1fr auto;gap:12px;align-items:center;z-index:5}
+#play{width:38px;height:38px;border-radius:50%;background:var(--cyan);color:#021018;display:grid;place-items:center;box-shadow:0 0 24px rgba(57,208,255,.45)}
+#play svg{width:14px;height:14px}
+#speed{font-family:var(--mono);font-size:11px;padding:6px 8px;border-radius:7px;border:1px solid var(--stroke-2);color:var(--cyan-2);min-width:58px}
+.track{position:relative;height:46px}
+#hist{position:absolute;left:0;right:0;top:0;height:30px;width:100%}
+#scrub{position:absolute;left:0;right:0;bottom:0;width:100%;margin:0;height:46px;opacity:0;cursor:pointer}
+.ticks{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;font-family:var(--mono);font-size:9.5px;color:var(--faint);pointer-events:none}
+#thumb{position:absolute;top:-4px;bottom:12px;width:2px;background:var(--cyan);box-shadow:0 0 12px var(--cyan);pointer-events:none;transform:translateX(-1px)}
+#thumb::after{content:"";position:absolute;top:-4px;left:-4px;width:10px;height:10px;border-radius:50%;background:var(--cyan);box-shadow:0 0 12px var(--cyan)}
+.tl-right{text-align:right;min-width:120px}
+#tlabel{font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+#tsub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:3px}
+#golive{font-family:var(--mono);font-size:10px;color:var(--cyan);letter-spacing:.1em;margin-top:3px;display:none}
+
+/* ---------- hint / labels ---------- */
+.label{position:fixed;left:0;top:0;pointer-events:none;font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:#dff7ff;white-space:nowrap;z-index:3;transition:opacity .3s;text-shadow:0 0 8px rgba(0,0,0,.9)}
+.label span{display:inline-block;padding:3px 7px;border:1px solid rgba(57,208,255,.45);border-radius:4px;background:rgba(2,10,24,.55);transform:translate(12px,-50%)}
+#hint{position:fixed;right:22px;bottom:30px;font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.08em;z-index:4;text-align:right;line-height:1.7}
+#hint kbd{font-family:var(--mono);border:1px solid var(--stroke-2);border-radius:4px;padding:1px 5px;color:var(--muted)}
+#toast{position:fixed;left:50%;top:96px;transform:translate(-50%,-6px);padding:9px 14px;font-family:var(--mono);font-size:11.5px;opacity:0;transition:all .35s;z-index:9;pointer-events:none}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ---------- cinematic ---------- */
+.bar{position:fixed;left:0;right:0;height:0;background:#000;z-index:7;transition:height 1s cubic-bezier(.7,0,.2,1)}
+.bar.top{top:0}.bar.bot{bottom:0}
+body.cine .bar{height:9vh}
+body.cine .hud{opacity:0!important;pointer-events:none!important}
+body.cine #info,body.cine .label{opacity:0!important}
+#caption{position:fixed;left:6vw;bottom:calc(9vh + 32px);z-index:8;opacity:0;transition:opacity .8s;pointer-events:none}
+body.cine #caption{opacity:1}
+#caption .c-idx{font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--cyan)}
+#caption .c-title{font-family:var(--display);font-weight:300;font-size:clamp(22px,3.4vw,44px);margin-top:10px;max-width:70vw;line-height:1.1}
+#caption .c-sub{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:10px;letter-spacing:.06em}
+#caption .c-line{height:1px;background:linear-gradient(90deg,var(--cyan),transparent);margin-top:16px;width:0;transition:width 5.5s linear}
+#caption.run .c-line{width:320px}
+#cinebrand{position:fixed;right:6vw;top:calc(9vh + 26px);z-index:8;opacity:0;transition:opacity .8s;pointer-events:none;font-family:var(--display);letter-spacing:.34em;font-size:13px}
+#cinebrand b{color:var(--cyan)}
+body.cine #cinebrand{opacity:.9}
+#rideui{position:fixed;left:50%;top:96px;transform:translateX(-50%);z-index:6;display:none;padding:8px 8px 8px 14px;align-items:center;gap:12px;font-family:var(--mono);font-size:11px}
+body.ride #rideui{display:flex}
+body.ride #left,body.ride #info{opacity:.0;pointer-events:none}
+
+/* ---------- loader ---------- */
+#loader{position:fixed;inset:0;display:grid;place-items:center;background:#02050d;z-index:20;transition:opacity 1.2s ease}
+#loader.done{opacity:0;pointer-events:none}
+.ld{display:grid;place-items:center;gap:22px}
+.ld svg{width:92px;height:92px;transform:rotate(-90deg)}
+.ld .trackc{stroke:rgba(140,210,255,.1)}
+.ld #arc{stroke:var(--cyan);stroke-linecap:round;transition:stroke-dashoffset .4s ease;filter:drop-shadow(0 0 6px var(--cyan))}
+.ld .wm{font-family:var(--display);letter-spacing:.42em;font-size:13px;padding-left:.42em}
+.ld .wm b{color:var(--cyan)}
+.ld .st{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.16em;text-transform:uppercase}
+
+/* ---------- sheet tabs (mobile) ---------- */
+#sheet{display:contents}
+#tabs{display:none}
+
+@media (max-width:1100px){
+  #right{width:270px}
+  #left{width:300px}
+  #info{left:340px}
+  .stat{min-width:0;padding:10px 12px}
+  #hint{display:none}
+}
+@media (max-width:900px){
+  #stats .stat:nth-child(4){display:none}
+}
+@media (max-width:760px){
+  #top{padding:12px var(--gut);flex-wrap:wrap;gap:10px}
+  .wordmark{font-size:13px;letter-spacing:.26em}
+  .tagline{display:none}
+  .brand-mark{width:26px;height:26px}
+  .right-top{margin-left:auto;flex-direction:row;align-items:center}
+  #utc{display:none}
+  #stats{order:3;width:100%;margin:0}
+  #stats .stat:nth-child(4){display:block}
+  .stat{flex:1;padding:8px 10px;min-width:0}
+  .stat .v{font-size:14px}
+  .stat .eyebrow{font-size:8.5px;letter-spacing:.1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #sheet{display:flex;flex-direction:column;position:fixed;left:0;right:0;bottom:0;height:52px;z-index:6;border-radius:18px 18px 0 0;border-bottom:0;transition:height .45s cubic-bezier(.3,.7,.2,1);overflow:hidden}
+  #sheet.open{height:58vh}
+  #tabs{display:flex;flex:none;height:52px;align-items:center;padding:0 10px;gap:4px;position:relative}
+  #tabs::before{content:"";position:absolute;left:50%;top:6px;width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,.18);transform:translateX(-50%)}
+  #tabs button{flex:1;height:36px;margin-top:6px;border-radius:9px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+  #tabs button.on{color:var(--cyan);background:rgba(57,208,255,.08)}
+  #left,#right{position:static;width:auto;inset:auto;flex:1;min-height:0;display:none;background:none;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;border-radius:0;padding:0 4px 12px}
+  #sheet[data-tab="events"] #left{display:flex}
+  #sheet[data-tab="layers"] #right{display:flex}
+  #right .glass{background:rgba(255,255,255,.02)}
+  #timeline{bottom:62px;width:calc(100vw - 2*var(--gut));grid-template-columns:auto auto 1fr;padding:10px 12px}
+  .tl-right{display:none}
+  #info{left:var(--gut);right:var(--gut);width:auto;top:auto;bottom:140px;max-height:52vh;overflow:auto}
+  #toast{top:120px}
+  #rideui{top:124px}
+  #caption{left:var(--gut);right:var(--gut)}
+  #caption .c-title{max-width:none}
+  #cinebrand{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+
+/* ---------- actual view (satellite / ShakeMap) ---------- */
+.av{margin-top:14px}
+.av-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.av-ctl{display:flex;align-items:center;gap:4px}
+.av-ctl button{font-family:var(--mono);font-size:10.5px;padding:4px 7px;border-radius:7px;border:1px solid var(--stroke);color:var(--muted);transition:all .15s;line-height:1.1}
+.av-ctl button:hover:not(:disabled){color:var(--text);border-color:var(--stroke-2)}
+.av-ctl button:disabled{opacity:.35;cursor:default}
+.av-ctl button.on{color:#021018;background:var(--warm);border-color:var(--warm)}
+.av-date{font-family:var(--mono);font-size:10.5px;color:var(--cyan-2);min-width:74px;text-align:center;font-variant-numeric:tabular-nums}
+.av-sats{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap}
+.av-sats button.on{color:#021018;background:var(--cyan);border-color:var(--cyan)}
+.av-frame{position:relative;width:100%;aspect-ratio:8/5;border-radius:10px;overflow:hidden;border:1px solid var(--stroke);background:#030a18}
+.av-frame.shake{aspect-ratio:1/1;background:#fff}
+.av-frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .45s ease}
+.av-frame.shake img{object-fit:contain}
+.av-frame img.ok{opacity:1}
+.av-frame img.fire{pointer-events:none}
+.av-frame.shake .av-msg{color:#445}
+.av-msg .btn{margin-top:10px}
+.av-frame .av-sk{position:absolute;inset:0;background:linear-gradient(100deg,rgba(57,208,255,0) 20%,rgba(57,208,255,.09) 50%,rgba(57,208,255,0) 80%) #061228;background-size:220% 100%;animation:avsk 1.4s linear infinite;transition:opacity .3s}
+.av-frame.loaded .av-sk,.av-frame.err .av-sk{opacity:0;animation:none}
+@keyframes avsk{from{background-position:120% 0}to{background-position:-120% 0}}
+.av-frame .av-cross{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border:1px solid rgba(255,255,255,.75);border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,.35);pointer-events:none;opacity:0;transition:opacity .3s}
+.av-frame.loaded .av-cross{opacity:.85}
+.av-frame.shake .av-cross{display:none}
+.av-msg{position:absolute;inset:0;display:none;place-items:center;text-align:center;padding:16px;font-size:12.5px;line-height:1.5;color:var(--muted)}
+.av-frame.err .av-msg{display:grid}
+.av-cap{display:flex;justify-content:space-between;gap:8px;align-items:baseline;margin-top:7px;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;color:var(--muted)}
+.av-cap a{color:var(--cyan-2);text-decoration:none;white-space:nowrap}
+.av-cap a:hover{text-decoration:underline}
+.av-note{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:6px}
+#info{max-height:calc(100vh - 120px);overflow:auto;scrollbar-width:thin;scrollbar-color:rgba(140,210,255,.2) transparent}
+@media (max-width:760px){#info{max-height:min(62vh,calc(100vh - 220px))}}
+</style>
+</head>
+<body>
+
+<div id="stage"></div>
+<div class="vignette"></div>
+<div class="grain"></div>
+<div class="bar top"></div><div class="bar bot"></div>
+
+<div id="loader" role="status" aria-live="polite">
+  <div class="ld">
+    <svg viewBox="0 0 100 100" aria-hidden="true"><circle class="trackc" cx="50" cy="50" r="44" fill="none" stroke-width="1.5"/><circle id="arc" cx="50" cy="50" r="44" fill="none" stroke-width="1.5" stroke-dasharray="276.46" stroke-dashoffset="276.46"/></svg>
+    <div class="wm">EARTH <b>PULSE</b></div>
+    <div class="st" id="ldst">Loading planet surface</div>
+  </div>
+</div>
+
+<header id="top" class="hud">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="11" fill="none" stroke="#39d0ff" stroke-width="1.4"/><ellipse cx="20" cy="20" rx="17" ry="6" fill="none" stroke="#39d0ff" stroke-opacity=".5" stroke-width="1" transform="rotate(-24 20 20)"/><path d="M9 20h5l2.5-5 3.5 10 3-7 2 2h6" fill="none" stroke="#e7f2ff" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    </div>
+    <div>
+      <div class="wordmark">EARTH <b>PULSE</b></div>
+      <div class="tagline">REAL-TIME PLANETARY SIGNALS</div>
+    </div>
+  </div>
+  <div id="stats" class="glass">
+    <div class="stat"><div class="eyebrow">Quakes · 24h</div><div class="v" id="s-q">—</div></div>
+    <div class="stat"><div class="eyebrow">Largest</div><div class="v accent" id="s-m">—</div></div>
+    <div class="stat"><div class="eyebrow">Active fires</div><div class="v" id="s-f">—</div></div>
+    <div class="stat"><div class="eyebrow">ISS</div><div class="v" id="s-i">—</div></div>
+  </div>
+  <div class="right-top">
+    <div class="badge glass" id="badge"><span class="dot"></span><span id="badge-t">Connecting</span></div>
+    <div id="utc" class="num"></div>
+  </div>
+</header>
+
+<div id="sheet" class="glass-sheet" data-tab="events">
+  <nav id="tabs"><button data-tab="events" class="on">Events</button><button data-tab="layers">Layers · Brief</button></nav>
+  <aside id="left" class="glass hud" aria-label="Event feed">
+    <div class="panel-h"><h2>Event stream</h2><span class="eyebrow num" id="feedcount"></span></div>
+    <div class="chips" id="chips">
+      <button class="chip on" data-f="all">All</button>
+      <button class="chip" data-f="quake">Quakes</button>
+      <button class="chip" data-f="fire">Fires</button>
+      <button class="chip" data-f="volcano">Volcanoes</button>
+      <button class="chip" data-f="storm">Storms</button>
+      <button class="chip" data-f="other">Ice · other</button>
+    </div>
+    <div id="feed" role="list"></div>
+  </aside>
+  <aside id="right" class="hud" aria-label="Controls">
+    <section class="glass card">
+      <h3>Planet briefing <span class="ai-mark" id="aimark" style="display:none"><i></i>CLAUDE</span></h3>
+      <div id="brief"></div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn primary" id="briefbtn" style="display:none">Generate briefing</button>
+        <button class="btn" id="cinebtn" title="Cinematic tour (C)">Cinematic tour</button>
+      </div>
+      <form id="ask" autocomplete="off">
+        <input id="askin" placeholder="Ask the planet… e.g. where is it most volatile?" aria-label="Ask the planet">
+        <button type="submit" aria-label="Ask"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </form>
+      <div id="answer"></div>
+    </section>
+    <section class="glass card">
+      <h3>Layers</h3>
+      <div class="toggles" id="toggles">
+        <button class="tg on" data-l="quakes" style="--c:#ff7a45"><span class="sw"></span>Quakes</button>
+        <button class="tg on" data-l="iss" style="--c:#39d0ff"><span class="sw"></span>ISS</button>
+        <button class="tg on" data-l="fires" style="--c:#ff8a2a"><span class="sw"></span>Fires</button>
+        <button class="tg on" data-l="volcanoes" style="--c:#ff4d3a"><span class="sw"></span>Volcanoes</button>
+        <button class="tg on" data-l="storms" style="--c:#bfefff"><span class="sw"></span>Storms</button>
+        <button class="tg on" data-l="other" style="--c:#9ff3ff"><span class="sw"></span>Ice · other</button>
+        <button class="tg on" data-l="clouds" style="--c:#ffffff"><span class="sw"></span>Clouds</button>
+        <button class="tg on" data-l="lights" style="--c:#ffc46b"><span class="sw"></span>City lights</button>
+      </div>
+    </section>
+    <section class="glass card">
+      <h3>ISS · Zarya <span class="eyebrow num" id="iss-orb"></span></h3>
+      <div class="iss-grid">
+        <div class="kv"><div class="k">Speed</div><div class="v" id="iss-v">—</div></div>
+        <div class="kv"><div class="k">Altitude</div><div class="v" id="iss-a">—</div></div>
+        <div class="kv"><div class="k">Lat</div><div class="v" id="iss-lat">—</div></div>
+        <div class="kv"><div class="k">Lon</div><div class="v" id="iss-lon">—</div></div>
+      </div>
+      <div style="display:flex;gap:8px"><button class="btn" id="issfind">Locate</button><button class="btn primary" id="ride">Ride along</button></div>
+    </section>
+  </aside>
+</div>
+
+<div id="info" class="glass" role="dialog" aria-label="Event details"></div>
+
+<div id="timeline" class="glass hud">
+  <button id="play" aria-label="Play 24-hour replay"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg></button>
+  <button id="speed" aria-label="Replay speed">300×</button>
+  <div class="track">
+    <canvas id="hist"></canvas>
+    <div id="thumb"></div>
+    <div class="ticks"><span>−24h</span><span>−18h</span><span>−12h</span><span>−6h</span><span>now</span></div>
+    <input id="scrub" type="range" min="0" max="1000" value="1000" aria-label="Time scrubber, last 24 hours">
+  </div>
+  <div class="tl-right"><div id="tlabel">—</div><div id="tsub">LIVE CLOCK</div><button id="golive">↦ RETURN TO NOW</button></div>
+</div>
+
+<div id="hint" class="hud"><kbd>drag</kbd> orbit · <kbd>dbl-click</kbd> weather · <kbd>C</kbd> cinematic</div>
+<div id="toast" class="glass"></div>
+<div id="rideui" class="glass"><span class="ai-mark"><i></i>RIDING WITH THE ISS</span><button class="btn" id="rideexit">Exit · Esc</button></div>
+<div id="caption"><div class="c-idx" id="c-idx"></div><div class="c-title" id="c-title"></div><div class="c-sub" id="c-sub"></div><div class="c-line"></div></div>
+<div id="cinebrand">EARTH <b>PULSE</b></div>
+<div class="label" id="isslabel"><span>ISS</span></div>
+<div class="label" id="sellabel"><span></span></div>
+
+<script type="application/json" id="snapshot">{"captured":1790583961421,"quakes":[["ci41340159",0.76,1790583454400,34.033,-116.853,12.3,0,9,"12 km N of Banning, CA"],["aka2026tfhzve",1.2,1790582548773,61.522,-151.173,18.7,0,22,"35 km W of Susitna, Alaska"],["nc75443697",1.27,1790582241940,38.829,-122.856,2.6,0,25,"10 km WNW of The Geysers, CA"],["pr71534953",2.18,1790581063240,17.975,-66.933,7.0,0,73,"2 km SW of Fuig, Puerto Rico"],["hv75044527",1.71,1790581051700,19.211,-155.484,26.6,0,45,"1 km NNW of P\u0101hala, Hawaii"],["pr71534948",3.37,1790580909620,18.185,-68.51,86.5,0,175,"23 km SSE of Boca de Yuma, Dominican Republic"],["hv75044517",2.48,1790579877790,19.532,-155.106,21.4,0,95,"2 km S of Mountain View, Hawaii"],["ci41340151",0.64,1790579417360,33.547,-116.435,2.4,0,6,"17 km SW of La Quinta, CA"],["aka2026tffyee",1.6,1790578838052,60.083,-148.07,23.3,0,39,"3 km WNW of Chenega, Alaska"],["aka2026tffqqt",2,1790578318241,60.835,-150.985,11.4,0,62,"18 km WSW of Point Possession, Alaska"],["nc75443687",1,1790578127120,38.831,-122.816,1.7,0,15,"8 km NW of The Geysers, CA"],["nc75443682",0.8,1790577021690,38.797,-122.765,2.4,0,10,"2 km NNW of The Geysers, CA"],["aka2026tfeofm",2.1,1790576350710,61.63,-148.136,0.9,0,68,"25 km SE of Chickaloon, Alaska"],["nc75443677",0.81,1790575985690,38.799,-122.764,2.0,0,10,"3 km NNW of The Geysers, CA"],["aka2026tfehzd",0.9,1790575918316,61.852,-148.146,18.8,0,12,"17 km ENE of Chickaloon, Alaska"],["nn00924977",3.3,1790574791730,38.896,-115.294,0,0,168,"20 km W of Preston, Nevada"],["ci41340143",0.95,1790574579470,33.994,-117.005,14.3,0,14,"5 km E of Calimesa, CA"],["ci41340135",0.82,1790574536040,33.995,-117.007,14.7,0,10,"4 km E of Calimesa, CA"],["nc75443662",1.52,1790574535040,38.788,-122.767,1.9,0,36,"1 km NW of The Geysers, CA"],["us6000ty38",5.2,1790574329689,-21.225,168.427,10,0,416,"67 km ENE of Tadine, New Caledonia"],["us6000ty36",4.9,1790574152024,-21.397,168.229,10,0,369,"39 km ENE of Tadine, New Caledonia"],["us6000ty3a",4.6,1790574141379,-21.237,168.395,10,0,326,"63 km ENE of Tadine, New Caledonia"],["aka2026tfdfhc",2.7,1790573933293,58.437,-155.707,153.6,0,112,"62 km ESE of King Salmon, Alaska"],["aka2026tfcwab",2.3,1790573290841,62.405,-150.951,70.2,0,81,"13 km SW of Petersville, Alaska"],["us6000ty33",5.1,1790573288891,-21.206,168.546,10,0,400,"78 km ENE of Tadine, New Caledonia"],["nc75443652",1.62,1790572482950,36.271,-120.837,6.7,0,40,"22 km SW of New Idria, CA"],["nc75443647",0.31,1790572009290,38.833,-122.817,1.4,0,1,"8 km NW of The Geysers, CA"],["nc75443637",1.35,1790570984240,37.419,-121.452,4.1,0,28,"26 km WSW of Westley, CA"],["nc75443632",2.08,1790570944350,37.462,-121.775,5.6,0,67,"12 km NNE of Alum Rock, CA"],["tx2026tbzqex",1.8,1790570907330,31.653,-104.443,6.1,0,50,"58 km S of Whites City, New Mexico"],["us6000ty2w",4.6,1790570576780,49.026,151.571,258.7,0,326,"northwest of the Kuril Islands"],["us6000ty2y",4.9,1790570493467,-57.65,-25.347,35,0,369,"South Sandwich Islands region"],["us6000ty2u",5.4,1790570481639,50.053,-130.221,10,1,449,"231 km WSW of Port McNeill, Canada"],["nc75443622",1.84,1790569910160,38.787,-122.906,6.1,0,52,"10 km ESE of Cloverdale, CA"],["nc75443617",1.23,1790569856320,38.788,-122.909,5.2,0,23,"10 km ESE of Cloverdale, CA"],["ci41340127",0.23,1790569492600,33.583,-116.759,12.5,0,1,"9 km WNW of Anza, CA"],["aka2026tezzsl",1,1790568169707,63.257,-145.306,7.6,0,15,"24 km NE of Paxson, Alaska"],["pr71534903",2.59,1790567731610,18.346,-66.236,66.5,0,103,"3 km SE of Galateo, Puerto Rico"],["nc75443602",0.75,1790567547320,38.816,-122.82,2.1,0,9,"7 km NW of The Geysers, CA"],["nc75443592",0.71,1790567384900,38.818,-122.802,2.5,0,8,"6 km NW of The Geysers, CA"],["aka2026tezneu",2.8,1790567283007,60.558,-152.135,89.8,0,121,"45 km W of Salamatof, Alaska"],["ci41340111",1.54,1790567137440,32.84,-115.474,8.4,0,36,"9 km E of Imperial, CA"],["us6000ty2e",5.1,1790567024172,-57.67,-25.279,35,0,400,"South Sandwich Islands region"],["us6000ty2b",5.3,1790565906893,-21.224,168.355,10,0,432,"60 km NE of Tadine, New Caledonia"],["ci41340103",1.14,1790565867070,33.649,-116.763,14.2,0,20,"11 km SSW of Idyllwild, CA"],["aka2026teyrxj",2,1790565811770,61.7,-150.141,25.6,0,62,"7 km SW of Willow, Alaska"],["pr71534893",1.7,1790565763740,17.94,-66.935,6.8,0,44,"4 km SW of Gu\u00e1nica, Puerto Rico"],["ci41340095",1.16,1790565736140,33.406,-116.364,11.0,0,21,"17 km N of Borrego Springs, CA"],["aka2026teynqk",1.6,1790565515956,62.203,-150.146,7.5,0,39,"13 km SSE of Trapper Creek, Alaska"],["aka2026teycsf",2,1790564759784,59.77,-152.206,68.3,0,62,"21 km W of Anchor Point, Alaska"],["ci41340087",1.13,1790564418710,35.763,-117.555,11.0,0,20,"14 km W of Searles Valley, CA"],["us6000ty27",4.9,1790564023974,50.237,-129.776,10,0,369,"195 km WSW of Port McNeill, Canada"],["ci41340071",1.71,1790563360270,33.574,-116.766,12.1,0,45,"9 km WNW of Anza, CA"],["aka2026texejf",2,1790563193030,60.124,-152.493,94.9,0,62,"46 km W of Ninilchik, Alaska"],["aka2026tewzkg",2.2,1790562730245,61.71,-146.63,0.1,0,74,"32 km SSE of Nelchina, Alaska"],["hv75044407",2.11,1790562088800,19.166,-155.378,29.3,0,68,"11 km ESE of P\u0101hala, Hawaii"],["aka2026tewfxq",0.5,1790561382541,58.227,-155.133,7.1,0,4,"83 km NNW of Karluk, Alaska"],["tx2026tbsorg",2.5,1790558129698,31.717,-104.505,5.8,0,96,"52 km SSW of Whites City, New Mexico"],["aka2026teuien",2.3,1790557940376,59.534,-152.366,67.2,0,81,"32 km NW of Nanwalek, Alaska"],["aka2026teucga",2,1790557642111,61.625,-150.872,61.9,0,62,"21 km WNW of Susitna, Alaska"],["pr71534883",3.43,1790557511190,18.302,-68.842,156.6,0,181,"19 km SE of La Romana, Dominican Republic"],["aka2026teuaqx",3.1,1790557419496,59.816,-153.303,139,0,148,"45 km E of Pedro Bay, Alaska"],["us6000ty1l",4.9,1790556883108,15.437,119.503,10,0,369,"43 km W of Palauig, Philippines"],["ci41340055",0.8,1790556467400,34.294,-116.86,4.3,0,10,"4 km NNW of Big Bear City, CA"],["us6000ty1m",4.8,1790556453083,-21.446,168.645,10,0,354,"80 km E of Tadine, New Caledonia"],["us6000ty1j",4.5,1790555879117,58.737,163.903,10,0,312,"74 km SE of Ossora, Russia"],["hv75044377",1.74,1790554907720,19.196,-155.473,28.5,0,47,"0 km SE of P\u0101hala, Hawaii"],["nc75443562",0.75,1790554524850,38.803,-122.781,3.6,0,9,"4 km NW of The Geysers, CA"],["uw714110692",2.63,1790554329480,46.208,-121.523,2.3,0,106,"23 km N of Trout Lake, Washington"],["aka2026tescqz",1.4,1790553960730,62.44,-151.2,11,0,30,"23 km WSW of Petersville, Alaska"],["us6000ty1a",4.5,1790553348800,-21.994,-179.782,602.2,0,312,"Fiji region"],["ci41340047",0.77,1790553157880,33.535,-116.707,5.5,0,9,"4 km SW of Anza, CA"],["us6000ty16",2.5,1790552752132,31.575,-104.34,10.0,0,96,"59 km WNW of Toyah, Texas"],["ci41340039",0.76,1790552608020,34.047,-117.243,15.7,0,9,"2 km E of Loma Linda, CA"],["ci41340031",1.51,1790551152230,35.034,-117.69,1.3,0,35,"5 km NW of Boron, CA"],["ci41340023",0.5,1790550742870,33.538,-116.706,5.9,0,4,"3 km WSW of Anza, CA"],["nc75443512",1.12,1790550363920,38.799,-122.763,-0.3,0,19,"2 km NNW of The Geysers, CA"],["nc75443507",2.16,1790550176570,39.576,-123.374,6.9,0,72,"15 km N of Brooktrails, CA"],["ci41340015",1.02,1790548938830,34.214,-116.971,1.1,0,16,"6 km WSW of Big Bear Lake, CA"],["aka2026teozvl",2.3,1790548360757,60.535,-155.784,5,0,81,"81 km NW of Nondalton, Alaska"],["aka2026teoitp",1.2,1790547185956,57.867,-155.587,20.3,0,22,"75 km WNW of Karluk, Alaska"],["nc75443452",2.22,1790547029370,38.368,-122.407,7.5,0,76,"5 km SW of Yountville, CA"],["us6000ty2n",3.5,1790546942880,51.578,-174.561,10,0,188,"73 km SSW of Atka, Alaska"],["us6000ty0u",4.6,1790546272827,4.531,-76.775,70.5,0,326,"19 km SW of Sip\u00ed, Colombia"],["aka2026tenrvu",2.6,1790546016911,62.611,-149.453,61.7,0,104,"37 km ENE of Chase, Alaska"],["us6000ty0q",4.8,1790545788024,18.587,-68.999,119.2,0,434,"2 km W of Guaymate, Dominican Republic"],["nc75443422",0.76,1790545457880,38.825,-122.844,2.0,0,9,"9 km NW of The Geysers, CA"],["nc75443407",0.35,1790545216610,38.785,-122.776,3.1,0,2,"2 km WNW of The Geysers, CA"],["ci41340007",1.11,1790545201080,33.978,-116.826,17.7,0,19,"7 km NE of Banning, CA"],["ci41339999",1.18,1790545172700,33.975,-116.83,18.4,0,21,"7 km NE of Banning, CA"],["us6000ty2m",3.3,1790544980167,53.511,-157.733,10,0,168,"271 km SE of Sand Point, Alaska"],["aka2026temugc",2.2,1790544381905,59.748,-152.677,87.6,0,74,"47 km W of Anchor Point, Alaska"],["nc75443377",1.47,1790544132160,38.83,-122.819,1.8,0,33,"8 km NW of The Geysers, CA"],["aka2026temmhr",2.6,1790543833242,63.139,-150.41,111.7,0,104,"73 km NNE of Petersville, Alaska"],["uw714110532",1.34,1790543713320,46.244,-122.643,16.9,0,28,"20 km E of Castle Rock, Washington"],["us6000ty0k",4.5,1790543691832,-9.6,123.776,35,0,312,"0 km ESE of Naisano Dua, Indonesia"],["us6000ty0j",5,1790543613366,-59.059,-25.895,103.8,0,385,"South Sandwich Islands region"],["nc75443367",1.21,1790543356080,37.417,-121.451,4.9,0,23,"26 km WSW of Westley, CA"],["nc75443357",1.19,1790542988270,38.839,-122.825,1.8,0,22,"9 km WNW of Cobb, CA"],["us6000ty0g",4.4,1790542162298,48.381,156.784,10,0,298,"259 km S of Severo-Kuril\u2019sk, Russia"],["us6000ty0e",4.1,1790542160425,-37.71,177.058,153.5,0,259,"28 km NNE of Whakatane, New Zealand"],["hv75044317",1.85,1790541595600,19.152,-155.377,27.7,0,53,"12 km ESE of P\u0101hala, Hawaii"],["nc75443337",1.36,1790539519140,38.823,-122.762,1.7,0,28,"3 km W of Cobb, CA"],["nc75443327",1.12,1790539282040,38.793,-122.808,3.0,0,19,"5 km WNW of The Geysers, CA"],["nc75443307",1.17,1790538463240,38.793,-122.807,3.4,0,21,"5 km WNW of The Geysers, CA"],["nc75443302",2.15,1790538357920,38.791,-122.808,3,0,71,"5 km WNW of The Geysers, CA"],["nc75443297",0.74,1790538180400,38.794,-122.761,1.2,0,8,"2 km NNW of The Geysers, CA"],["nc75443292",1.09,1790538101060,38.836,-122.784,2.0,0,18,"5 km WNW of Cobb, CA"],["us6000ty06",4.1,1790537612354,-31.417,-179.876,354.4,0,259,"Kermadec Islands region"],["nc75443272",1.55,1790536911170,39.315,-123.254,2.7,0,37,"7 km NW of Redwood Valley, CA"],["nc75443252",2.63,1790536236830,39.324,-123.27,-0.4,0,108,"9 km NW of Redwood Valley, CA"],["us6000ty01",4.4,1790535343715,-43.086,-72.623,10,0,299,"20 km SSE of Chait\u00e9n, Chile"],["ci41339983",1.51,1790534574100,33.486,-116.482,13.0,0,35,"19 km ESE of Anza, CA"],["ci41339975",1.1,1790534191730,34.328,-117.001,9.2,0,19,"12 km NW of Big Bear Lake, CA"],["us6000txzx",4.5,1790533809687,29.744,100.266,10,0,312,"78 km N of Daocheng, China"],["aka2026tegxen",2.1,1790533789545,59.919,-152.299,91.3,0,68,"30 km WNW of Anchor Point, Alaska"],["hv74000254",3.03,1790533632750,20.436,-153.956,29.4,0,141,"136 km ENE of Honomu, Hawaii"],["nc75443227",2.33,1790532958350,36.648,-121.303,8.1,0,84,"16 km S of Tres Pinos, CA"],["nc75443222",1.27,1790532191640,37.422,-121.455,4.5,0,25,"26 km WSW of Westley, CA"],["hv75044287",2.15,1790531883040,19.333,-155.486,9.2,0,71,"14 km N of P\u0101hala, Hawaii"],["nn00924968",1.57,1790531533000,38.48,-119.51,3.7,0,38,"4 km SW of Walker, California"],["aka2026tefcyi",1.1,1790530598707,59.44,-153.426,17.4,0,19,"54 km SE of Pedro Bay, Alaska"],["ci41339959",1.01,1790529545750,32.967,-115.553,10.3,0,16,"3 km WSW of Brawley, CA"],["aka2026tedvrp",2.6,1790528288186,59.957,-152.981,127.9,0,104,"65 km ENE of Pedro Bay, Alaska"],["nc75443182",0.88,1790528126080,38.803,-122.782,3.3,0,12,"4 km NW of The Geysers, CA"],["aka2026tedqnf",1.7,1790527932381,61.814,-149.84,25.1,0,44,"12 km NE of Willow, Alaska"],["ci41339951",0.57,1790527814120,33.159,-116.419,8.2,0,5,"12 km SSW of Borrego Springs, CA"],["aka2026tedncw",1.8,1790527696401,64.468,-146.902,4.5,0,50,"6 km S of Salcha, Alaska"],["us6000txzj",5,1790527390268,35.386,99.554,10,0,385,"191 km NW of Oula Xiuma, China"],["nc75443167",0.76,1790525979050,38.819,-122.795,3.0,0,9,"6 km NW of The Geysers, CA"],["aka2026tecers",1.9,1790525314263,62.189,-150.169,60.4,0,56,"14 km SSE of Trapper Creek, Alaska"],["nc75443157",1.3,1790525218500,38.792,-122.807,3.0,0,26,"5 km WNW of The Geysers, CA"],["nc75443152",1.68,1790525193300,37.422,-121.453,4.3,0,43,"26 km WSW of Westley, CA"],["pr71534858",1.84,1790524881240,17.859,-66.65,13.8,0,52,"16 km SSE of Tallaboa, Puerto Rico"],["us6000txzg",2.5,1790524355119,31.689,-104.593,6.5,0,96,"57 km SSW of Whites City, New Mexico"],["aka2026tebmli",1.7,1790524070153,60.058,-152.787,118.7,0,44,"60 km WNW of Happy Valley, Alaska"],["nc75443142",1.4,1790524045140,37.426,-121.456,4.8,0,30,"26 km WSW of Westley, CA"],["ci41339935",0.96,1790523937250,33.995,-117.249,10.8,0,14,"6 km SSE of Loma Linda, CA"],["us6000txze",2.6,1790523909410,34.066,-106.719,5,0,104,"15 km E of Socorro, New Mexico"],["aka2026tebiel",2.9,1790523759408,56.568,-156.301,4.4,0,129,"124 km SSE of Ugashik, Alaska"],["ci41339927",3.55,1790523601580,33.844,-118.465,11.9,0,534,"6 km WSW of Hermosa Beach, CA"],["ci41339919",1.4,1790522152840,33.469,-116.888,13.1,0,30,"4 km NW of Aguanga, CA"],["ci41339911",0.75,1790521100710,33.998,-117.249,10.9,0,9,"6 km SSE of Loma Linda, CA"],["nc75443112",2.63,1790520046580,37.421,-121.455,2.7,0,106,"26 km WSW of Westley, CA"],["ci41339903",0.54,1790519849920,33.516,-116.57,13.1,0,4,"11 km ESE of Anza, CA"],["aka2026tdyzrj",2.3,1790519566894,58.335,-151.176,7.3,0,81,"90 km ENE of Ouzinkie, Alaska"],["nc75443102",1.34,1790519545190,37.423,-121.455,4.6,0,28,"26 km WSW of Westley, CA"],["nc75443097",3.32,1790518910350,37.418,-121.455,2.4,0,173,"27 km WSW of Westley, CA"],["nc75443087",1.72,1790518275330,37.461,-118.835,2.9,0,46,"18 km SW of Toms Place, CA"],["nc75443082",1.2,1790518175080,37.463,-118.834,1.2,0,22,"17 km SW of Toms Place, CA"],["nn00924959",2.55,1790517382154,39.102,-115.29,1.0,0,100,"28 km NW of Preston, Nevada"],["nn00924958",1.58,1790516201211,38.503,-116.461,4.0,0,38,"82 km NE of Tonopah, Nevada"],["hv75044217",3.11,1790515835860,19.364,-155.081,7.6,0,151,"12 km SSE of Fern Forest, Hawaii"],["nc75443077",0.75,1790514865960,38.829,-122.865,2.5,0,9,"11 km WNW of The Geysers, CA"],["ci41339887",0.92,1790514795990,33.367,-116.71,10.1,0,13,"12 km NW of Warner Springs, CA"],["aka2026tdvrey",3,1790513585943,62.647,-152.116,5,0,138,"71 km WNW of Petersville, Alaska"],["nc75443067",1.32,1790513566060,35.985,-120.381,5.4,0,27,"11 km NNE of Parkfield, CA"],["ci41339879",0.93,1790513145450,33.532,-116.744,2.6,0,13,"7 km WSW of Anza, CA"],["ci41339871",0.95,1790513134210,34.031,-116.908,2.6,0,14,"12 km NNW of Banning, CA"],["aka2026tdvfsz",0.7,1790512792282,58.303,-154.98,5,0,8,"87 km NNW of Karluk, Alaska"],["ci41339863",1.45,1790512777520,32.746,-115.453,18.9,0,32,"7 km ENE of Heber, CA"],["nc75443062",1.25,1790512423160,38.835,-122.797,2.0,0,24,"7 km WNW of Cobb, CA"],["ci41339855",0.62,1790512017750,33.326,-116.794,17.3,0,6,"7 km ESE of Palomar Observatory, CA"],["ci41339847",1.47,1790510206410,33.869,-117.716,6.6,0,33,"9 km ESE of Yorba Linda, CA"],["us6000txyi",2.8,1790509940278,34.535,-97.44,9.3,0,121,"6 km NNE of Tatums, Oklahoma"],["nc75443057",0.34,1790509722770,38.826,-122.867,2.2,0,2,"11 km WNW of The Geysers, CA"],["nc75443052",0.57,1790509648830,38.827,-122.814,2.3,0,5,"8 km NW of The Geysers, CA"],["ci41339839",0.24,1790509304330,33.538,-116.708,6.4,0,1,"4 km WSW of Anza, CA"],["aka2026tdteha",1.1,1790509092957,64.946,-148.903,15.8,0,19,"31 km SE of Minto, Alaska"],["nc75443042",1.09,1790507960660,38.79,-122.768,1.8,0,18,"2 km NW of The Geysers, CA"],["aka2026tdsjeb",2.3,1790507631762,63.597,-150.622,1.2,0,81,"55 km E of Denali National Park, Alaska"],["nc75443037",0.74,1790507103800,38.843,-122.823,1.5,0,8,"9 km WNW of Cobb, CA"],["aka2026tdrvxc",1.1,1790506713771,58.254,-155.153,5,0,19,"86 km NNW of Karluk, Alaska"],["nc75443032",0.7,1790506694140,38.832,-122.8,2.3,0,8,"7 km W of Cobb, CA"],["us6000txyf",4.3,1790506627641,68.924,-17.223,10,0,284,"Iceland region"],["nc75443027",1.59,1790506114790,37.764,-122.001,8.0,0,39,"3 km SW of San Ramon, CA"],["nc75443022",1.06,1790505726480,38.833,-122.8,2.3,0,17,"7 km W of Cobb, CA"],["nc75443017",0.7,1790505429900,38.835,-122.792,1.7,0,8,"6 km WNW of Cobb, CA"],["nc75443012",0.69,1790505412190,38.835,-122.793,1.8,0,7,"6 km WNW of Cobb, CA"],["us6000txyd",4.2,1790505121985,-40.374,175.882,48.5,0,272,"4 km NNE of Mangatainoka, New Zealand"],["us6000txye",4.4,1790505026420,51.231,179.762,18.0,0,298,"259 km WSW of Adak, Alaska"],["ci41339831",0.51,1790504947560,33.112,-116.608,15.2,0,4,"4 km N of Julian, CA"],["nc75443007",0.78,1790504878980,38.791,-122.759,1.5,0,9,"2 km N of The Geysers, CA"],["hv75044172",1.81,1790503790590,19.344,-155.427,27.1,0,50,"16 km NNE of P\u0101hala, Hawaii"],["us6000txya",4.2,1790503628075,18.647,-69.699,98.1,0,281,"13 km SSW of Bayaguana, Dominican Republic"],["ci41339823",1.37,1790503253470,33.722,-116.864,15.7,0,29,"4 km SE of Valle Vista, CA"],["ci41339815",2.27,1790503219350,32.965,-115.87,7.3,0,79,"25 km WSW of Westmorland, CA"],["aka2026tdpwyn",1.3,1790503188444,58.249,-155.152,5,0,26,"86 km NNW of Karluk, Alaska"],["aka2026tdpvgs",0.8,1790503071856,58.259,-155.171,0.2,0,10,"87 km NNW of Karluk, Alaska"],["hv75044167",1.91,1790503066470,18.764,-155.418,6.3,0,56,"37 km SSE of Naalehu, Hawaii"],["ci41339807",0.8,1790502377540,33.997,-116.746,15.8,0,10,"10 km NNE of Cabazon, CA"],["aka2026tdpkhb",0.9,1790502311481,58.261,-155.152,5,0,12,"87 km NNW of Karluk, Alaska"],["aka2026tdpjia",1.8,1790502245142,58.257,-155.139,4.3,0,50,"86 km NNW of Karluk, Alaska"],["hv75044162",1.85,1790501989090,19.222,-155.354,30.4,0,53,"13 km E of P\u0101hala, Hawaii"],["aka2026tdpejr",2.1,1790501903521,60.945,-151.954,89.7,0,68,"45 km NW of Nikiski, Alaska"],["aka2026tdpcfm",0.8,1790501753794,58.245,-155.13,5,0,10,"85 km NNW of Karluk, Alaska"],["aka2026tdozyq",2.3,1790501594828,67.396,-146.29,2,0,81,"42 km N of Venetie, Alaska"],["hv75044157",1.74,1790501581580,19.324,-155.163,3.8,0,47,"15 km SSE of Volcano, Hawaii"],["ci41339799",0.83,1790500246800,33.639,-116.715,13.8,0,11,"10 km NNW of Anza, CA"],["ci41339791",1.45,1790499999210,34.102,-118.262,5.7,0,32,"1 km NNE of Silver Lake, CA"],["nn00924954",4.1,1790499247495,38.923,-115.299,6,0,259,"20 km W of Preston, Nevada"],["hv75044142",2.13,1790498906780,19.401,-155.006,41.7,0,70,"12 km SW of Leilani Estates, Hawaii"],["ci41339767",1.21,1790498642440,35.309,-117.796,6.6,0,23,"16 km WSW of Johannesburg, CA"],["aka2026tdnitz",1.2,1790498609152,61.692,-149.217,5,0,22,"5 km S of Fishhook, Alaska"],["nn00924953",1.84,1790498285341,38.988,-115.343,0,0,52,"25 km WNW of Preston, Nevada"],["nc75442982",0.28,1790498152270,38.833,-122.8,2.5,0,1,"7 km W of Cobb, CA"],["nc75442972",1.54,1790498058250,38.833,-122.8,2.1,0,36,"7 km W of Cobb, CA"],["nc75442967",1.99,1790498050310,38.833,-122.8,2.2,0,61,"7 km W of Cobb, CA"],["nn00924951",2.56,1790497553538,38.932,-115.301,4.2,0,101,"20 km W of Preston, Nevada"],["us6000txpi",6.6,1790371383309,-21.298,168.61,10,0,678,"80 km ENE of Tadine, New Caledonia"]],"eonet":[["EONET_24875","storm","Tropical Storm Rachel",1790553600000,12.8,-99.5,"https://www.metoc.navy.mil/jtwc/products/ep1826.tcw",35.0,"kts","Severe Storms"],["EONET_24811","storm","Tropical Storm Gonzalo",1790456400000,19.3,-23.3,"https://www.nhc.noaa.gov/archive/2026/GONZALO.shtml",35.0,"kts","Severe Storms"],["EONET_24786","storm","Hurricane Nolo",1790553600000,16.2,-159.8,"https://www.metoc.navy.mil/jtwc/products/ep1526.tcw",115.0,"kts","Severe Storms"],["EONET_24787","storm","Super Typhoon Surigae",1790553600000,26.6,130.9,"https://www.metoc.navy.mil/jtwc/products/wp2526.tcw",120.0,"kts","Severe Storms"],["EONET_24785","storm","Tropical Cyclone 01B",1790208000000,18.1,83.7,"https://www.metoc.navy.mil/jtwc/products/io0126.tcw",35.0,"kts","Severe Storms"],["EONET_24721","storm","Hurricane Polo",1790553600000,22.4,-114.1,"https://science.nasa.gov/earth/earth-observatory/explosive-intensification-for-hurricane-polo/",110.0,"kts","Severe Storms"],["EONET_24722","storm","Tropical Storm Fay",1790542800000,28.9,-44,"https://www.nhc.noaa.gov/archive/2026/FAY.shtml",30.0,"kts","Severe Storms"],["EONET_24720","storm","Hurricane Odalys",1790532000000,22.7,-123.2,"https://www.metoc.navy.mil/jtwc/products/ep1626.tcw",40.0,"kts","Severe Storms"],["EONET_20822","ice","Iceberg D33D",1784764800000,-63.78,-55.47,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",90.0,"NM^2","Sea and Lake Ice"],["EONET_20710","volcano","Nevados del Chillan Volcano, Chile",1781481600000,-36.868,-71.378,"https://volcano.si.edu/volcano.cfm?vn=357070",null,null,"Volcanoes"],["EONET_20409","volcano","Telica Volcano, Nicaragua",1780099200000,12.606,-86.84,"https://volcano.si.edu/volcano.cfm?vn=344040",null,null,"Volcanoes"],["EONET_20392","volcano","Ivao Group Volcano, Russia",1780012800000,45.759,149.676,"https://volcano.si.edu/volcano.cfm?vn=290111",null,null,"Volcanoes"],["EONET_20395","volcano","Titan Ridge Volcano, Papua New Guinea",1779926400000,-3.03,147.78,"https://science.nasa.gov/earth/earth-observatory/new-eruption-in-the-bismarck-sea/",null,null,"Volcanoes"],["EONET_20411","volcano","Kikai Volcano, Japan",1778976000000,30.793,130.305,"https://volcano.si.edu/volcano.cfm?vn=282060",null,null,"Volcanoes"],["EONET_20410","volcano","Bezymianny Volcano, Russia",1778889600000,55.972,160.595,"https://volcano.si.edu/volcano.cfm?vn=300250",null,null,"Volcanoes"],["EONET_20220","ice","Iceberg B51",1778803200000,-74.22,-130.63,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",31.48,"NM^2","Sea and Lake Ice"],["EONET_20221","ice","Iceberg D15D",1778803200000,-67.28,79.31,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",27.17,"NM^2","Sea and Lake Ice"],["EONET_20413","volcano","Langila Volcano, Papua New Guinea",1778198400000,-5.525,148.42,"https://volcano.si.edu/volcano.cfm?vn=252010",null,null,"Volcanoes"],["EONET_20103","volcano","Rincon de la Vieja Volcano, Costa Rica",1777248000000,10.831,-85.336,"https://volcano.si.edu/volcano.cfm?vn=345020",null,null,"Volcanoes"],["EONET_20102","volcano","Masaya Volcano, Nicaragua",1777161600000,11.984,-86.169,"https://volcano.si.edu/volcano.cfm?vn=344100",null,null,"Volcanoes"],["EONET_18592","ice","Iceberg D15C",1776988800000,-67.09,79.82,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",98.0,"NM^2","Sea and Lake Ice"],["EONET_17165","volcano","Mayon Volcano, Philippines",1767744000000,13.257,123.685,"https://science.nasa.gov/earth/earth-observatory/eruption-at-mayon/",null,null,"Volcanoes"],["EONET_17166","volcano","Sabancaya Volcano, Peru",1766966400000,-15.787,-71.857,"https://volcano.si.edu/volcano.cfm?vn=354006",null,null,"Volcanoes"],["EONET_16203","volcano","Ambae Volcano, Vanuatu",1764720000000,-15.389,167.835,"https://volcano.si.edu/volcano.cfm?vn=257030",null,null,"Volcanoes"],["EONET_16202","volcano","Purac\u00e9 Volcano, Colombia",1764633600000,2.309,-76.395,"https://volcano.si.edu/volcano.cfm?vn=351060",null,null,"Volcanoes"],["EONET_15852","ice","Iceberg C18C",1776988800000,-68.47,39.08,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",20.0,"NM^2","Sea and Lake Ice"],["EONET_15811","volcano","Kanlaon Volcano, Philippines",1757462400000,10.41,123.13,"https://volcano.si.edu/volcano.cfm?vn=272020",null,null,"Volcanoes"],["EONET_15330","volcano","Krasheninnikov Volcano, Russia",1756080000000,54.596,160.27,"https://science.nasa.gov/earth/earth-observatory/krasheninnikova-remains-restless/",null,null,"Volcanoes"],["EONET_14284","ice","Iceberg B22H",1781222400000,-70.23,164.3,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",48.0,"NM^2","Sea and Lake Ice"],["EONET_13342","volcano","Popocatepetl Volcano,\u00a0Mexico",1744243200000,19.023,-98.622,"https://volcano.si.edu/volcano.cfm?vn=341090",null,null,"Volcanoes"],["EONET_12716","ice","Iceberg A85",1790208000000,-60.56,-52.52,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",30.0,"NM^2","Sea and Lake Ice"],["EONET_12717","ice","Iceberg D37",1740096000000,-69.22,36.34,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",210.0,"NM^2","Sea and Lake Ice"],["EONET_12813","volcano","Lewotolok Volcano, Indonesia",1739923200000,-8.274,123.508,"https://volcano.si.edu/volcano.cfm?vn=264230",null,null,"Volcanoes"],["EONET_12618","ice","Iceberg A84",1790208000000,-70.41,-97.68,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",72.0,"NM^2","Sea and Lake Ice"],["EONET_12367","volcano","Kilauea Volcano, Hawaii",1734912000000,19.421,-155.287,"https://science.nasa.gov/earth/earth-observatory/restless-kilauea-launches-lava-and-ash/",null,null,"Volcanoes"],["EONET_10631","volcano","Sheveluch Volcano, Russia",1723852800000,56.653,161.36,"https://volcano.si.edu/volcano.cfm?vn=300270",null,null,"Volcanoes"],["EONET_10212","ice","Iceberg B22F",1789689600000,-67.52,-176.03,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",98.0,"NM^2","Sea and Lake Ice"],["EONET_9679","volcano","Suwanosejima Volcano, Japan",1722556800000,29.638,129.714,"https://volcano.si.edu/volcano.cfm?vn=282030",null,null,"Volcanoes"],["EONET_6523","ice","Iceberg A83",1789689600000,-61.27,-51.39,"https://earthobservatory.nasa.gov/images/152848/antarctic-ice-shelf-spawns-iceberg-a-83",84.0,"NM^2","Sea and Lake Ice"],["EONET_6510","ice","Iceberg D33C",1790208000000,-61.95,-54.38,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",45.0,"NM^2","Sea and Lake Ice"],["EONET_6474","ice","Iceberg D35",1789689600000,-60.27,-45.73,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",90.0,"NM^2","Sea and Lake Ice"],["EONET_6470","volcano","Lewotobi Volcano, Indonesia",1703721600000,-8.542,122.775,"https://earthobservatory.nasa.gov/images/153549/mount-lewotobi-laki-laki-spews-ash",null,null,"Volcanoes"],["EONET_6462","volcano","Marapi Volcano, Indonesia",1701561600000,-0.38,100.474,"https://volcano.si.edu/volcano.cfm?vn=261140",null,null,"Volcanoes"],["EONET_6452","volcano","Dukono Volcano, Indonesia",1699315200000,1.699,127.878,"https://volcano.si.edu/volcano.cfm?vn=268010",null,null,"Volcanoes"],["EONET_6448","ice","Iceberg D34",1697760000000,-67.18,82.12,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",88.0,"NM^2","Sea and Lake Ice"],["EONET_6423","ice","Iceberg D33A",1781740800000,-64.24,-55.79,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",340.0,"NM^2","Sea and Lake Ice"],["EONET_6424","ice","Iceberg D33B",1790208000000,-59.29,-45.58,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",252.0,"NM^2","Sea and Lake Ice"],["EONET_6369","volcano","Ibu Volcano, Indonesia",1686009600000,1.488,127.63,"https://volcano.si.edu/volcano.cfm?vn=268030",null,null,"Volcanoes"],["EONET_6320","ice","Iceberg A81",1790208000000,-56.94,-44.39,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",700.0,"NM^2","Sea and Lake Ice"],["EONET_6288","ice","Iceberg D32",1789689600000,-57.62,-38.36,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",54.0,"NM^2","Sea and Lake Ice"],["EONET_6175","volcano","Stromboli Volcano, Italy",1659830400000,38.789,15.213,"http://volcano.si.edu/volcano.cfm?vn=211040",null,null,"Volcanoes"],["EONET_6104","volcano","Aira Volcano, Japan",1656288000000,31.593,130.657,"http://volcano.si.edu/volcano.cfm?vn=282080",null,null,"Volcanoes"],["EONET_6051","ice","Iceberg C39",1787788800000,-65.9,56.66,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",24.0,"NM^2","Sea and Lake Ice"],["EONET_5359","ice","Iceberg A76C",1789689600000,-54.48,-26.55,"https://usicecenter.gov/Products/AntarcIcebergs",112.0,"NM^2","Sea and Lake Ice"],["EONET_5202","volcano","Merapi Volcano, Indonesia",1609977600000,-7.54,110.446,"http://volcano.si.edu/volcano.cfm?vn=263250",null,null,"Volcanoes"],["EONET_4624","volcano","Santa Maria Volcano, Guatemala",1584489600000,14.757,-91.552,"http://volcano.si.edu/volcano.cfm?vn=342030",null,null,"Volcanoes"],["EONET_4561","volcano","Semeru Volcano, Indonesia",1579305600000,-8.108,112.922,"http://volcano.si.edu/volcano.cfm?vn=263300",null,null,"Volcanoes"],["EONET_4269","volcano","Reventador Volcano, Ecuador",1562716800000,-0.07,-77.65,"http://volcano.si.edu/volcano.cfm?vn=352010",null,null,"Volcanoes"],["EONET_4156","volcano","Sangay Volcano, Ecuador",1553591950000,-2.005,-78.341,"http://volcano.si.edu/volcano.cfm?vn=352090",null,null,"Volcanoes"],["EONET_4133","ice","Iceberg C18B",1773964800000,-66.77,47.55,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",40.0,"NM^2","Sea and Lake Ice"],["EONET_4134","ice","Iceberg C24",1552435200000,-64.84,96.02,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",null,null,"Sea and Lake Ice"],["EONET_4136","ice","Iceberg C30",1552435200000,-64.78,96.3,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",null,null,"Sea and Lake Ice"],["EONET_4137","ice","Iceberg C31",1552435200000,-64.69,96.52,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",null,null,"Sea and Lake Ice"],["EONET_4143","ice","Iceberg D23",1552435200000,-69.43,74.65,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",null,null,"Sea and Lake Ice"],["EONET_4122","ice","Iceberg B09G",1552348800000,-67.97,41.71,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",null,null,"Sea and Lake Ice"],["EONET_4089","ice","Iceberg C36",1773360000000,-67.76,147.04,"https://usicecenter.gov/pub/Iceberg_Tabular.csv",368.0,"NM^2","Sea and Lake Ice"],["EONET_2871","ice","Iceberg D15B",1512086400000,-67.08,81.76,"http://www.scp.byu.edu/data/iceberg/ascat/d15b.ascat",null,null,"Sea and Lake Ice"],["EONET_2870","ice","Iceberg D15A",1454198400000,-66.7,81.917,"http://www.scp.byu.edu/data/iceberg/ascat/d15a.ascat",null,null,"Sea and Lake Ice"],["EONET_2736","ice","Iceberg B22A",1788998400000,-69.88,164.79,"http://www.scp.byu.edu/data/iceberg/ascat/b22a.ascat",725.0,"NM^2","Sea and Lake Ice"],["EONET_2876","ice","Iceberg C15",1512086400000,-66.25,143.36,"http://www.scp.byu.edu/data/iceberg/ascat/c15.ascat",null,null,"Sea and Lake Ice"],["EONET_2878","ice","Iceberg B09B",1515715200000,-66.37,143.39,"http://www.scp.byu.edu/data/iceberg/ascat/b09b.ascat",null,null,"Sea and Lake Ice"],["EONET_2997","ice","Iceberg C21B",1314662400000,-64.996,96.18,"http://www.scp.byu.edu/data/iceberg/ascat/c21b.ascat",null,null,"Sea and Lake Ice"],["EONET_980","volcano","Fuego Volcano, Guatemala",1010102400000,14.473,-90.88,"http://emergency.copernicus.eu/mapping/list-of-components/EMSR289",null,null,"Volcanoes"],["EONET_24809","fire","Wildfire Merit Creek, Greene, Mississippi",1790158320000,31.053,-88.838,"https://irwin.doi.gov/observer/incidents/2026-MSMNF-000578",828.0,"acres","Wildfires"],["EONET_24710","fire","Wildfire Round Prarie, Morehouse, Louisiana",1789925520000,32.858,-91.989,"https://irwin.doi.gov/observer/incidents/2026-LALAS-000390",738.55,"acres","Wildfires"],["EONET_24810","fire","Prescribed Fire CRAWFORD CORRAL RX, Tulare, California",1789824360000,36.602,-118.972,"https://irwin.doi.gov/observer/incidents/2026-CATUU-000092",690.0,"acres","Wildfires"],["EONET_24719","fire","Prescribed Fire D2 Dye RX, Coconino, Arizona",1789667040000,34.435,-110.911,"https://irwin.doi.gov/observer/incidents/2026-AZASF-000955",5246.0,"acres","Wildfires"],["EONET_24718","fire","Prescribed Fire D2 Vincent RX, Coconino, Arizona",1789666500000,34.446,-110.966,"https://irwin.doi.gov/observer/incidents/2026-AZASF-000953",2258.0,"acres","Wildfires"],["EONET_24483","fire","Wildfire Breezy, Starr, Texas",1789589820000,26.458,-98.713,"https://irwin.doi.gov/observer/incidents/2026-TXTXS-268653",500.0,"acres","Wildfires"],["EONET_24488","fire","Wildfire FLORISTON, Nevada, California",1789563660000,39.394,-120.025,"https://irwin.doi.gov/observer/incidents/2026-CANEU-029037",610.0,"acres","Wildfires"],["EONET_24499","fire","Prescribed Fire RX CALV BU 104-108, Vernon, Louisiana",1789549680000,30.957,-93.165,"https://irwin.doi.gov/observer/incidents/2026-LAKIF-000378",878.0,"acres","Wildfires"],["EONET_24482","fire","Wildfire Clark, Edwards, Texas",1789518540000,29.933,-100.345,"https://irwin.doi.gov/observer/incidents/2026-TXTXS-268613",1523.0,"acres","Wildfires"],["EONET_24476","fire","Wildfire Calvary Creek, Washita, Oklahoma",1789492140000,35.158,-98.988,"https://irwin.doi.gov/observer/incidents/2026-OKOKS-261109",905.9,"acres","Wildfires"],["EONET_24481","fire","Wildfire Dry River, Sutton, Texas",1789491540000,30.541,-100.745,"https://irwin.doi.gov/observer/incidents/2026-TXTXS-268594",8761.0,"acres","Wildfires"],["EONET_24478","fire","Wildfire BLUE LAKE, Indian River, Florida",1789490280000,27.743,-80.717,"https://irwin.doi.gov/observer/incidents/2026-FLFLS-1600755",950.0,"acres","Wildfires"],["EONET_24485","fire","Wildfire Lobo, Eastland, Texas",1789481520000,32.427,-98.931,"https://irwin.doi.gov/observer/incidents/2026-TXTXS-268583",658.0,"acres","Wildfires"],["EONET_24484","fire","Wildfire DOME, Mariposa, California",1789471740000,37.566,-119.616,"https://irwin.doi.gov/observer/incidents/2026-CAYNP-000100",1177.0,"acres","Wildfires"],["EONET_24502","fire","Wildfire Bunker Fire, Calhoun, Arkansas",1789440420000,33.574,-92.586,"https://irwin.doi.gov/observer/incidents/2026-ARARS-000000",2338.0,"acres","Wildfires"],["EONET_24473","fire","Wildfire Hydra, Bosque, Texas",1789409940000,31.849,-97.653,"https://irwin.doi.gov/observer/incidents/2026-TXTXS-268545",1100.0,"acres","Wildfires"],["EONET_24474","fire","Wildfire Atoka Lake, Atoka, Oklahoma",1789408500000,34.414,-96.106,"https://irwin.doi.gov/observer/incidents/2026-OKOKS-261105",727.0,"acres","Wildfires"],["EONET_24475","fire","Wildfire Tram Trail, Pushmataha, Oklahoma",1789404720000,34.282,-95.374,"https://irwin.doi.gov/observer/incidents/2026-OKOKS-261089",660.0,"acres","Wildfires"],["EONET_24490","fire","Wildfire Bunker Fire, Calhoun, Arkansas",1789395720000,33.574,-92.586,"https://irwin.doi.gov/observer/incidents/2026-ARARS-100236",2832.0,"acres","Wildfires"],["EONET_24477","fire","Wildfire Black Kettle, Roger Mills, Oklahoma",1789391220000,35.759,-99.656,"https://irwin.doi.gov/observer/incidents/2026-OKOKS-261103",1526.5,"acres","Wildfires"],["EONET_24487","fire","Wildfire Davis Coulee, Big Horn, Montana",1789386180000,45.54,-107.627,"https://irwin.doi.gov/observer/incidents/2026-MTCRA-261393",15470.0,"acres","Wildfires"],["EONET_24715","fire","Prescribed Fire D7 Rhoton Seep RX, Apache, Arizona",1789383960000,34.157,-109.808,"https://irwin.doi.gov/observer/incidents/2026-AZASF-000947",2609.0,"acres","Wildfires"],["EONET_24711","fire","Prescribed Fire D7 Morgan Unit 5 RX, Navajo, Arizona",1789383900000,34.225,-110.122,"https://irwin.doi.gov/observer/incidents/2026-AZASF-000946",2085.0,"acres","Wildfires"],["EONET_24713","fire","Prescribed Fire D7 Butler West RX, Apache, Arizona",1789383780000,34.191,-109.72,"https://irwin.doi.gov/observer/incidents/2026-AZASF-000945",788.0,"acres","Wildfires"],["EONET_24714","fire","Prescribed Fire D7 Brushy Mtn South RX, Apache, Arizona",1789383660000,34.128,-109.812,"https://irwin.doi.gov/observer/incidents/2026-AZASF-000944",887.0,"acres","Wildfires"],["EONET_24716","fire","Prescribed Fire D7 Arab RX, Apache, Arizona",1789383420000,34.21,-109.725,"https://irwin.doi.gov/observer/incidents/2026-AZASF-000943",674.0,"acres","Wildfires"],["EONET_24712","fire","Prescribed Fire D7 Apprentice RX, Apache, Arizona",1789383120000,34.184,-109.821,"https://irwin.doi.gov/observer/incidents/2026-AZASF-000942",2375.0,"acres","Wildfires"],["EONET_24717","fire","Prescribed Fire D6 Wallow West Unit 6 RX, Apache, Arizona",1789319580000,33.799,-109.438,"https://irwin.doi.gov/observer/incidents/2026-AZASF-000940",7605.0,"acres","Wildfires"],["EONET_24486","fire","Wildfire GRACEMONT, Caddo, Oklahoma",1789313580000,35.323,-98.237,"https://irwin.doi.gov/observer/incidents/2026-OKANA-002871",2665.0,"acres","Wildfires"],["EONET_24498","fire","Wildfire Star Lake, Jefferson, Texas",1789155360000,29.664,-94.159,"https://irwin.doi.gov/observer/incidents/2026-TXMCR-000378",16412.0,"acres","Wildfires"],["EONET_24489","fire","Wildfire LUCAS, Lake, California",1789060980000,39.232,-123.003,"https://irwin.doi.gov/observer/incidents/2026-CALNU-016127",4128.0,"acres","Wildfires"],["EONET_24510","fire","Wildfire LUCAS, Lake, California",1789042680000,39.233,-123.003,"https://irwin.doi.gov/observer/incidents/2026-CAMEU-010693",1099.0,"acres","Wildfires"],["EONET_24503","fire","Wildfire RAY COAKER, Washington, Alabama",1788989580000,31.374,-88.321,"https://irwin.doi.gov/observer/incidents/2026-ALALS-260909-4",707.0,"acres","Wildfires"],["EONET_24189","fire","Wildfire MEERS, Comanche, Oklahoma",1788886620000,34.841,-98.678,"https://irwin.doi.gov/observer/incidents/2026-OKANA-002798",914.0,"acres","Wildfires"],["EONET_24185","fire","Wildfire Kurk, San Saba, Texas",1788885540000,31.06,-98.653,"https://irwin.doi.gov/observer/incidents/2026-TXTXS-268233",1000.0,"acres","Wildfires"],["EONET_24192","fire","Wildfire PINTO, Stephens, Oklahoma",1788871440000,34.414,-97.593,"https://irwin.doi.gov/observer/incidents/2026-OKCHA-002788",553.0,"acres","Wildfires"],["EONET_24187","fire","Wildfire Moonshine, Albany, Wyoming",1788811080000,41.954,-105.322,"https://irwin.doi.gov/observer/incidents/2026-WYHDD-000478",2000.0,"acres","Wildfires"],["EONET_24100","fire","Wildfire S7, Broward, Florida",1788534960000,26.326,-80.5,"https://irwin.doi.gov/observer/incidents/2026-FLFLS-1800147",884.0,"acres","Wildfires"],["EONET_24096","fire","Wildfire Needles, Oglala Lakota, South Dakota",1788529980000,43.304,-102.311,"https://irwin.doi.gov/observer/incidents/2026-SDPRA-000151",6017.81,"acres","Wildfires"],["EONET_24095","fire","Incident Complex Rattlesnake Complex, Prairie, Montana",1788526740000,46.586,-104.928,"https://irwin.doi.gov/observer/incidents/2026-MTEAS-000786",15582.0,"acres","Wildfires"],["EONET_23868","fire","Emergency Stabilization BAER McConnell, Humboldt, Nevada",1788440580000,41.518,-117.742,"https://irwin.doi.gov/observer/incidents/2026-NVWID-020663",500.0,"acres","Wildfires"],["EONET_23869","fire","Wildfire Ayers Pond, Prairie, Montana",1788399900000,46.651,-104.83,"https://irwin.doi.gov/observer/incidents/2026-MTMCD-000777",565.8,"acres","Wildfires"],["EONET_23870","fire","Wildfire Snow, Custer, Montana",1788387360000,46.486,-105.185,"https://irwin.doi.gov/observer/incidents/2026-MTLG14-000775",1100.0,"acres","Wildfires"],["EONET_24098","fire","Wildfire Fowl, Harding, New Mexico",1788374340000,35.569,-103.786,"https://irwin.doi.gov/observer/incidents/2026-NMN4S-000562",822.0,"acres","Wildfires"],["EONET_23656","fire","Wildfire Ruggs, Morrow, Oregon",1788190680000,45.253,-119.691,"https://irwin.doi.gov/observer/incidents/2026-ORHEPN-000600",650.0,"acres","Wildfires"],["EONET_23658","fire","Wildfire Harris, Throckmorton, Texas",1788186120000,33.056,-99.076,"https://irwin.doi.gov/observer/incidents/2026-TXTXS-267913",500.0,"acres","Wildfires"],["EONET_23685","fire","Wildfire SOUTH RAILROAD, Comanche, Oklahoma",1788082800000,34.608,-98.721,"https://irwin.doi.gov/observer/incidents/2026-OKANA-002690",500.0,"acres","Wildfires"],["EONET_23673","fire","Wildfire Alexander Trail Fire, Pushmataha, Oklahoma",1788080640000,34.478,-95.297,"https://irwin.doi.gov/observer/incidents/2026-OKOKSC-260966",1400.0,"acres","Wildfires"],["EONET_23871","fire","Wildfire Alexander Trail, Pushmataha, Oklahoma",1788080640000,34.478,-95.297,"https://irwin.doi.gov/observer/incidents/2026-OKOKS-260966",1600.0,"acres","Wildfires"],["EONET_23683","fire","Wildfire 4V, San Miguel, New Mexico",1788030120000,35.535,-104.295,"https://irwin.doi.gov/observer/incidents/2026-NMN4S-000549",1000.0,"acres","Wildfires"],["EONET_23674","fire","Wildfire WRIGHT, Hughes, Oklahoma",1788026700000,35.225,-96.115,"https://irwin.doi.gov/observer/incidents/2026-OKOMA-002688",608.0,"acres","Wildfires"],["EONET_23676","fire","Wildfire RAILROAD SOUTH, Comanche, Oklahoma",1788021060000,34.608,-98.721,"https://irwin.doi.gov/observer/incidents/2026-OKANA-002686",515.0,"acres","Wildfires"],["EONET_23666","fire","Wildfire McKee Draw, Edwards, Texas",1788013020000,30.184,-100.315,"https://irwin.doi.gov/observer/incidents/2026-TXTXS-267823",4416.0,"acres","Wildfires"],["EONET_23664","fire","Wildfire West Fork, Sutton, Texas",1787944980000,30.369,-100.152,"https://irwin.doi.gov/observer/incidents/2026-TXTXS-267801",961.0,"acres","Wildfires"],["EONET_23669","fire","Wildfire Roe 2, Beaverhead, Montana",1787860080000,44.922,-112.778,"https://irwin.doi.gov/observer/incidents/2026-MTCES-266405",978.0,"acres","Wildfires"],["EONET_23668","fire","Wildfire Brushy Canyon, Box Elder, Utah",1787794920000,41.289,-112.48,"https://irwin.doi.gov/observer/incidents/2026-UTBRS-200695",10002.0,"acres","Wildfires"],["EONET_23453","fire","Wildfire Calico, Humboldt, Nevada",1787765340000,41.867,-117.356,"https://irwin.doi.gov/observer/incidents/2026-NVHTF-020624",10000.0,"acres","Wildfires"],["EONET_23672","fire","Wildfire Dudley, Shoshone, Idaho",1787762760000,47.539,-115.921,"https://irwin.doi.gov/observer/incidents/2026-IDIPF-000730",553.0,"acres","Wildfires"],["EONET_23681","fire","Wildfire Plaskett, Monterey, California",1787748360000,35.906,-121.412,"https://irwin.doi.gov/observer/incidents/2026-CALPF-002475",15479.0,"acres","Wildfires"],["EONET_23455","fire","Wildfire McConnell, Humboldt, Nevada",1787690580000,41.518,-117.742,"https://irwin.doi.gov/observer/incidents/2026-NVWID-020620",5000.0,"acres","Wildfires"],["EONET_23466","fire","Wildfire LAUGHLIN, Colfax, New Mexico",1787682900000,36.523,-104.453,"https://irwin.doi.gov/observer/incidents/2026-NMN2S-27-2057027",786.0,"acres","Wildfires"],["EONET_23456","fire","Wildfire MUSTANG, Malheur, Oregon",1787673840000,42.667,-117.443,"https://irwin.doi.gov/observer/incidents/2026-ORVAD-260267",13379.0,"acres","Wildfires"],["EONET_23663","fire","Wildfire Blue Eagle, Churchill, Nevada",1787668740000,39.752,-117.693,"https://irwin.doi.gov/observer/incidents/2026-NVCCD-030758",9218.0,"acres","Wildfires"],["EONET_23682","fire","Wildfire Paddy Creek, Apache, Arizona",1787656380000,33.621,-109.649,"https://irwin.doi.gov/observer/incidents/2026-AZFTA-000812",668.0,"acres","Wildfires"],["EONET_23677","fire","Wildfire Buck Creek, Pushmataha, Oklahoma",1787654040000,34.498,-95.694,"https://irwin.doi.gov/observer/incidents/2026-OKOKS-260920",597.0,"acres","Wildfires"],["EONET_23462","fire","Wildfire California  Creek, Elko, Nevada",1787617080000,41.826,-115.938,"https://irwin.doi.gov/observer/incidents/2026-NVHTF-010537",984.0,"acres","Wildfires"],["EONET_23667","fire","Wildfire FLINT, Owyhee, Idaho",1787593680000,42.882,-116.822,"https://irwin.doi.gov/observer/incidents/2026-IDBOD-000994",6763.0,"acres","Wildfires"],["EONET_23659","fire","Wildfire Forleen, Elko, Nevada",1787592480000,41.445,-115.036,"https://irwin.doi.gov/observer/incidents/2026-NVEKD-010519",667.0,"acres","Wildfires"],["EONET_23671","fire","Wildfire Rio Escondido, Hamilton, Texas",1787585460000,31.494,-98.12,"https://irwin.doi.gov/observer/incidents/2026-TXTXS-267552",2713.0,"acres","Wildfires"],["EONET_23459","fire","Wildfire Tom Creek, Tooele, Utah",1787584800000,40.005,-112.706,"https://irwin.doi.gov/observer/incidents/2026-UTWDD-200672",4859.0,"acres","Wildfires"],["EONET_23452","fire","Wildfire Ross, Palo Pinto, Texas",1787580720000,32.76,-98.343,"https://irwin.doi.gov/observer/incidents/2026-TXTXS-267549",80000.0,"acres","Wildfires"],["EONET_23458","fire","Wildfire Oxley, Elko, Nevada",1787580720000,41.184,-114.931,"https://irwin.doi.gov/observer/incidents/2026-NVEKD-010515",11384.0,"acres","Wildfires"],["EONET_23461","fire","Wildfire H2, Palm Beach, Florida",1787572200000,26.42,-80.791,"https://irwin.doi.gov/observer/incidents/2026-FLFLS-261800142",511.0,"acres","Wildfires"],["EONET_23465","fire","Wildfire Rabbit Ear East, Union, New Mexico",1787567760000,36.505,-103.142,"https://irwin.doi.gov/observer/incidents/2026-NMN2S-000724",1700.0,"acres","Wildfires"],["EONET_23463","fire","Wildfire Mitchell, Ware, Georgia",1787559360000,30.63,-82.241,"https://irwin.doi.gov/observer/incidents/2026-GAOKR-002585",735.0,"acres","Wildfires"],["EONET_23209","fire","Wildfire Old Deer, Carson, Texas",1787517480000,35.464,-101.217,"https://irwin.doi.gov/observer/incidents/2026-TXTXS-267516",676.0,"acres","Wildfires"],["EONET_23661","fire","Wildfire Nature Grove, Ravalli, Montana",1787514120000,46.154,-113.924,"https://irwin.doi.gov/observer/incidents/2026-MTBRF-000340",1141.0,"acres","Wildfires"],["EONET_23225","fire","Wildfire 22, Miami-Dade, Florida",1787502600000,25.943,-80.544,"https://irwin.doi.gov/observer/incidents/2026-FLFLS-1800143",500.0,"acres","Wildfires"],["EONET_23665","fire","Wildfire Parker Lake, Boundary, Idaho",1787502600000,48.87,-116.625,"https://irwin.doi.gov/observer/incidents/2026-IDIPF-000702",1403.0,"acres","Wildfires"],["EONET_23662","fire","Wildfire Campwood, Yavapai, Arizona",1787499240000,34.625,-113.101,"https://irwin.doi.gov/observer/incidents/2026-AZA5S-261347",1215.0,"acres","Wildfires"],["EONET_23680","fire","Wildfire Silver, Boundary, Idaho",1787493720000,48.629,-116.66,"https://irwin.doi.gov/observer/incidents/2026-IDIPF-000697",2424.0,"acres","Wildfires"],["EONET_23215","fire","Wildfire Rustler, Motley, Texas",1787445000000,33.838,-100.993,"https://irwin.doi.gov/observer/incidents/2026-TXTXS-267465",1300.0,"acres","Wildfires"],["EONET_23454","fire","Wildfire Electric, Whatcom, Washington",1787440560000,48.652,-121.435,"https://irwin.doi.gov/observer/incidents/2026-WAMSF-000494",500.0,"acres","Wildfires"],["EONET_23679","fire","Wildfire GOAT, Kittitas, Washington",1787432760000,47.459,-121.053,"https://irwin.doi.gov/observer/incidents/2026-WAOWF-260711",707.0,"acres","Wildfires"],["EONET_23219","fire","Wildfire Shale Butte, Lincoln, Idaho",1787432640000,42.962,-113.848,"https://irwin.doi.gov/observer/incidents/2026-IDTFD-000206",1500.0,"acres","Wildfires"],["EONET_23684","fire","Wildfire Thunder Creek, Skagit, Washington",1787426820000,48.55,-121.029,"https://irwin.doi.gov/observer/incidents/2026-WANCP-000482",648.0,"acres","Wildfires"],["EONET_23211","fire","Wildfire McCulley, Baker, Oregon",1787423880000,44.828,-118.281,"https://irwin.doi.gov/observer/incidents/2026-ORWWF-000531",1201.8,"acres","Wildfires"],["EONET_23218","fire","Wildfire Hawk, Washoe, Nevada",1787409900000,39.542,-119.952,"https://irwin.doi.gov/observer/incidents/2026-NVRNOX-030739",15051.0,"acres","Wildfires"],["EONET_23460","fire","Wildfire Hawk, Washoe, Nevada",1787409900000,39.542,-119.952,"https://irwin.doi.gov/observer/incidents/2026-NVTMFX-030739",15085.0,"acres","Wildfires"],["EONET_23214","fire","Wildfire Colwash, Yakima, Washington",1787398380000,46.175,-120.196,"https://irwin.doi.gov/observer/incidents/2026-WAYAA-000090",38599.0,"acres","Wildfires"],["EONET_23451","fire","Wildfire Camp Creek, Powell, Montana",1787340300000,47.428,-113.099,"https://irwin.doi.gov/observer/incidents/2026-MTFNF-000393",7240.0,"acres","Wildfires"],["EONET_24492","fire","Wildfire WHISKEY, Torrance, New Mexico",1787334480000,34.679,-106.432,"https://irwin.doi.gov/observer/incidents/2026-NMCIF-000540",542.0,"acres","Wildfires"],["EONET_23224","fire","Wildfire Chipmunk, Miami-Dade, Florida",1787326800000,25.545,-80.837,"https://irwin.doi.gov/observer/incidents/2026-FLEVP-002565",15508.0,"acres","Wildfires"],["EONET_23228","fire","Wildfire BISON, Osage, Oklahoma",1787317020000,36.877,-96.338,"https://irwin.doi.gov/observer/incidents/2026-OKOSA-002548",889.0,"acres","Wildfires"],["EONET_23230","fire","Wildfire 2690, Caddo, Oklahoma",1787307840000,35.165,-98.185,"https://irwin.doi.gov/observer/incidents/2026-OKANA-002546",900.0,"acres","Wildfires"],["EONET_23217","fire","Wildfire Salt Wells, Box Elder, Utah",1787298780000,41.81,-112.678,"https://irwin.doi.gov/observer/incidents/2026-UTBRS-200631",585.0,"acres","Wildfires"],["EONET_23213","fire","Wildfire Pine Tree Rd, Union, Arkansas",1787251980000,33.168,-92.492,"https://irwin.doi.gov/observer/incidents/2026-ARARS-400183",2328.0,"acres","Wildfires"],["EONET_23210","fire","Wildfire Deer Creek, Lincoln, Montana",1787244120000,48.162,-115.086,"https://irwin.doi.gov/observer/incidents/2026-MTNWS-000387",949.0,"acres","Wildfires"],["EONET_24493","fire","Wildfire Swiss Roll, Archuleta, Colorado",1787226780000,37.385,-106.787,"https://irwin.doi.gov/observer/incidents/2026-COSJF-000985",775.0,"acres","Wildfires"],["EONET_22927","fire","Prescribed Fire RX Tom Green 7105, Tom Green, Texas",1787217960000,31.149,-100.478,"https://irwin.doi.gov/observer/incidents/2026-TXTXS-267105",560.0,"acres","Wildfires"],["EONET_23212","fire","Wildfire KING, Kittitas, Washington",1787176440000,47.471,-121.256,"https://irwin.doi.gov/observer/incidents/2026-WAOWF-260699",558.0,"acres","Wildfires"],["EONET_23222","fire","Wildfire Movie Dome, Miami-Dade, Florida",1787168520000,25.434,-80.823,"https://irwin.doi.gov/observer/incidents/2026-FLEVP-002542",6222.0,"acres","Wildfires"],["EONET_22931","fire","Wildfire Windmill, Stillwater, Montana",1787162700000,45.836,-109.523,"https://irwin.doi.gov/observer/incidents/2026-MTLG32-261150",1000.0,"acres","Wildfires"],["EONET_22929","fire","Wildfire North Heglar, Cassia, Idaho",1787160300000,42.49,-113.095,"https://irwin.doi.gov/observer/incidents/2026-IDCAX-000198",700.0,"acres","Wildfires"],["EONET_23220","fire","Wildfire CROOKED, Boise, Idaho",1787084340000,43.847,-115.54,"https://irwin.doi.gov/observer/incidents/2026-IDBOF-000958",1530.0,"acres","Wildfires"],["EONET_22933","fire","Wildfire Sarpy, Big Horn, Montana",1786996080000,45.719,-107.475,"https://irwin.doi.gov/observer/incidents/2026-MTCRA-261132",897.0,"acres","Wildfires"],["EONET_22928","fire","Wildfire Mukluk, Southeast Fairbanks, Alaska",1786982100000,63.342,-143.064,"https://irwin.doi.gov/observer/incidents/2026-AKTAS-613487",5077.0,"acres","Wildfires"],["EONET_22798","fire","Wildfire Picture Rock, Lake, Oregon",1786895700000,43.009,-120.774,"https://irwin.doi.gov/observer/incidents/2026-ORLAD-260313",1625.0,"acres","Wildfires"],["EONET_22932","fire","Wildfire Jackson - Hwy 90, Jackson, Mississippi",1786893360000,30.418,-88.466,"https://irwin.doi.gov/observer/incidents/2026-MSMSS-018314",1428.0,"acres","Wildfires"],["EONET_22800","fire","Wildfire CATO 2, Chaves, New Mexico",1786835880000,33.508,-103.945,"https://irwin.doi.gov/observer/incidents/2026-NMROD-000632",2080.0,"acres","Wildfires"],["EONET_22791","fire","Wildfire THE H1, Palm Beach, Florida",1786832340000,26.369,-80.752,"https://irwin.doi.gov/observer/incidents/2026-FLFLS-1800136",3600.0,"acres","Wildfires"],["EONET_22799","fire","Wildfire THE RADIO TOWER, Miami-Dade, Florida",1786831560000,25.711,-80.474,"https://irwin.doi.gov/observer/incidents/2026-FLFLS-1800132",700.0,"acres","Wildfires"],["EONET_22795","fire","Wildfire Shoshone, Churchill, Nevada",1786816080000,39.83,-117.676,"https://irwin.doi.gov/observer/incidents/2026-NVCCD-030721",7934.0,"acres","Wildfires"],["EONET_22790","fire","Wildfire Burnt Canyon, Woodward, Oklahoma",1786809600000,36.596,-99.266,"https://irwin.doi.gov/observer/incidents/2026-OKOKS-260858",3335.0,"acres","Wildfires"],["EONET_23221","fire","Wildfire Slough Canyon, Grand, Utah",1786801860000,39.37,-109.923,"https://irwin.doi.gov/observer/incidents/2026-UTUOA-100254",3000.0,"acres","Wildfires"],["EONET_23216","fire","Wildfire SISI, Chelan, Washington",1786721700000,48.347,-120.831,"https://irwin.doi.gov/observer/incidents/2026-WAOWF-260664",801.0,"acres","Wildfires"],["EONET_22801","fire","Wildfire Snake Mountain, Pushmataha, Oklahoma",1786701900000,34.483,-95.18,"https://irwin.doi.gov/observer/incidents/2026-OKOKS-260835",703.0,"acres","Wildfires"],["EONET_23226","fire","Wildfire Main Trail, Chatham, Georgia",1786698180000,31.873,-80.988,"https://irwin.doi.gov/observer/incidents/2026-GAWSR-000370",820.0,"acres","Wildfires"],["EONET_22796","fire","Wildfire Fielder Mtn, Jackson, Oregon",1786645380000,42.422,-123.207,"https://irwin.doi.gov/observer/incidents/2026-OR712S-030327",573.0,"acres","Wildfires"],["EONET_22614","fire","Wildfire PLAINS, San Luis Obispo, California",1786548960000,35.417,-120.001,"https://irwin.doi.gov/observer/incidents/2026-CASLU-012768",2500.0,"acres","Wildfires"],["EONET_22802","fire","Wildfire Austin Non-Stat, Clackamas, Oregon",1786544340000,45.025,-121.955,"https://irwin.doi.gov/observer/incidents/2026-OR581S-000041",1000.0,"acres","Wildfires"],["EONET_22607","fire","Wildfire Sheep Pen, Las Animas, Colorado",1786529880000,37.076,-103.286,"https://irwin.doi.gov/observer/incidents/2026-COLSX-001553",712.0,"acres","Wildfires"],["EONET_22619","fire","Wildfire Rancher fire, Oglala Lakota, South Dakota",1786490220000,43.314,-102.333,"https://irwin.doi.gov/observer/incidents/2026-SDPRA-000134",1000.0,"acres","Wildfires"],["EONET_22609","fire","Wildfire Post, Las Animas, Colorado",1786482000000,37.082,-104.421,"https://irwin.doi.gov/observer/incidents/2026-COLSX-001549",4205.0,"acres","Wildfires"],["EONET_22616","fire","Wildfire XU Hill, Oglala Lakota, South Dakota",1786480200000,43.623,-102.423,"https://irwin.doi.gov/observer/incidents/2026-SDPRA-000130",1297.23,"acres","Wildfires"],["EONET_22610","fire","Wildfire Dos Pistolas, Brooks, Texas",1786478340000,27.104,-98.357,"https://irwin.doi.gov/observer/incidents/2026-TXTXS-266829",1000.0,"acres","Wildfires"],["EONET_22613","fire","Wildfire ALPOWA, Asotin, Washington",1786472400000,46.406,-117.247,"https://irwin.doi.gov/observer/incidents/2026-WAWFS-001959",1334.0,"acres","Wildfires"],["EONET_22617","fire","Wildfire Cold Springs, Converse, Wyoming",1786390200000,42.724,-105.491,"https://irwin.doi.gov/observer/incidents/2026-WYCOX-000403",1966.0,"acres","Wildfires"],["EONET_22622","fire","Prescribed Fire RX Tom Green 6687, Tom Green, Texas",1786385760000,31.15,-100.464,"https://irwin.doi.gov/observer/incidents/2026-TXTXS-266687",860.0,"acres","Wildfires"],["EONET_22618","fire","Wildfire Bufford Creek, Stephens, Texas",1786377120000,32.797,-98.822,"https://irwin.doi.gov/observer/incidents/2026-TXTXS-266794",3240.0,"acres","Wildfires"],["EONET_22612","fire","Wildfire Stallion, Washoe, Nevada",1786368660000,39.823,-119.525,"https://irwin.doi.gov/observer/incidents/2026-NVTMFX-030698",33426.0,"acres","Wildfires"],["EONET_22430","fire","Wildfire Harris, Rosebud, Montana",1786294500000,45.195,-106.634,"https://irwin.doi.gov/observer/incidents/2026-MTMCD-000676",924.3,"acres","Wildfires"],["EONET_22424","fire","Wildfire WEISER KNOLL, Fremont, Wyoming",1786293120000,42.636,-108.608,"https://irwin.doi.gov/observer/incidents/2026-WYWBD-000294",8500.0,"acres","Wildfires"],["EONET_22611","fire","Wildfire AUSTIN, Clackamas, Oregon",1786285800000,45.025,-121.945,"https://irwin.doi.gov/observer/incidents/2026-ORMHF-000863",1430.0,"acres","Wildfires"],["EONET_22428","fire","Wildfire Brown, Oldham, Texas",1786285260000,35.373,-102.989,"https://irwin.doi.gov/observer/incidents/2026-TXTXS-266753",800.0,"acres","Wildfires"],["EONET_22427","fire","Wildfire Fred Mt, Washoe, Nevada",1786282740000,39.763,-119.849,"https://irwin.doi.gov/observer/incidents/2026-NVTMFX-030694",1400.0,"acres","Wildfires"],["EONET_22431","fire","Wildfire Timber, Monterey, California",1786235760000,36.216,-121.718,"https://irwin.doi.gov/observer/incidents/2026-CALPF-002271",800.0,"acres","Wildfires"],["EONET_22434","fire","Wildfire PALOUSE RIVER, Whitman, Washington",1786222680000,46.871,-117.308,"https://irwin.doi.gov/observer/incidents/2026-WAWFS-001934",637.0,"acres","Wildfires"],["EONET_22432","fire","Wildfire Bug, Lassen, California",1786214940000,39.728,-120.038,"https://irwin.doi.gov/observer/incidents/2026-NVCCD-030683",15000.0,"acres","Wildfires"],["EONET_22436","fire","Wildfire WELLS ROAD, Whitman, Washington",1786214160000,47.24,-117.51,"https://irwin.doi.gov/observer/incidents/2026-WAWFS-001933",1812.0,"acres","Wildfires"],["EONET_22426","fire","Wildfire NUNAMAKER ROAD, Franklin, Washington",1786198560000,46.594,-118.407,"https://irwin.doi.gov/observer/incidents/2026-WASPD-260605",20870.0,"acres","Wildfires"],["EONET_22425","fire","Wildfire LITTLE GOOSE, Columbia, Washington",1786136460000,46.536,-118.09,"https://irwin.doi.gov/observer/incidents/2026-WAWFS-001924",8524.0,"acres","Wildfires"],["EONET_22433","fire","Wildfire MP18, Humboldt, California",1786132320000,41.133,-123.685,"https://irwin.doi.gov/observer/incidents/2026-CAHVT-000753",1500.0,"acres","Wildfires"],["EONET_22446","fire","Wildfire Rocky Canyon, Morgan, Utah",1786127400000,40.94,-111.642,"https://irwin.doi.gov/observer/incidents/2026-UTNWS-200580",4372.0,"acres","Wildfires"],["EONET_22442","fire","Wildfire RIDGE, Los Angeles, California",1786124640000,34.791,-118.83,"https://irwin.doi.gov/observer/incidents/2026-CALAC-278844",1134.0,"acres","Wildfires"],["EONET_22454","fire","Wildfire Montgomery Draw, Campbell, Wyoming",1786043940000,44.367,-105.856,"https://irwin.doi.gov/observer/incidents/2026-WYCMX-000389",536.0,"acres","Wildfires"],["EONET_22445","fire","Wildfire COTTONWOOD, Grant, Oregon",1786041660000,44.628,-119.38,"https://irwin.doi.gov/observer/incidents/2026-OR952S-026181",723.0,"acres","Wildfires"],["EONET_22444","fire","Wildfire 310, Garfield, Colorado",1786030800000,39.444,-107.984,"https://irwin.doi.gov/observer/incidents/2026-COGFX-260411",601.0,"acres","Wildfires"],["EONET_22447","fire","Wildfire B.B, Osage, Oklahoma",1786020960000,36.908,-96.461,"https://irwin.doi.gov/observer/incidents/2026-OKOSA-002275",2304.0,"acres","Wildfires"],["EONET_22196","fire","Wildfire Wrights Spring, Klamath, Oregon",1785952800000,42.469,-121.729,"https://irwin.doi.gov/observer/incidents/2026-ORFWF-260286",1200.0,"acres","Wildfires"],["EONET_22195","fire","Wildfire BUZZARD, Kern, California",1785928080000,34.9,-118.923,"https://irwin.doi.gov/observer/incidents/2026-CAKRN-032905",500.0,"acres","Wildfires"],["EONET_22429","fire","Wildfire Frijoles, Santa Fe, New Mexico",1785924300000,35.909,-105.848,"https://irwin.doi.gov/observer/incidents/2026-NMSNF-000444",3000.0,"acres","Wildfires"],["EONET_22197","fire","Wildfire Bare, Sublette, Wyoming",1785865560000,42.759,-110.482,"https://irwin.doi.gov/observer/incidents/2026-WYBTF-002621",800.0,"acres","Wildfires"],["EONET_22201","fire","Wildfire Butte, Gila, Arizona",1785791700000,33.51,-110.164,"https://irwin.doi.gov/observer/incidents/2026-AZSCA-001192",670.0,"acres","Wildfires"],["EONET_22198","fire","Wildfire GANN, Calaveras, California",1785788880000,38.111,-120.773,"https://irwin.doi.gov/observer/incidents/2026-CATCU-011483",10373.0,"acres","Wildfires"],["EONET_22101","fire","Wildfire Middle Coulee, Chouteau, Montana",1785709020000,47.733,-110.99,"https://irwin.doi.gov/observer/incidents/2026-MTLG19-000260",1200.0,"acres","Wildfires"],["EONET_22108","fire","Wildfire Antelope Creek, Elko, Nevada",1785681060000,41.049,-116.544,"https://irwin.doi.gov/observer/incidents/2026-NVEKD-010378",6500.0,"acres","Wildfires"],["EONET_22105","fire","Wildfire Bluegill, Miami-Dade, Florida",1785674820000,25.758,-80.606,"https://irwin.doi.gov/observer/incidents/2026-FLEVP-002390",750.0,"acres","Wildfires"],["EONET_22107","fire","Wildfire MITRE ROCK, Stevens, Washington",1785620520000,47.912,-118.328,"https://irwin.doi.gov/observer/incidents/2026-WASPA-001868",1547.0,"acres","Wildfires"],["EONET_22109","fire","Wildfire Johnson Canyon, Box Elder, Utah",1785618420000,41.875,-112.305,"https://irwin.doi.gov/observer/incidents/2026-UTBRS-200554",6500.0,"acres","Wildfires"],["EONET_22443","fire","Wildfire Black Bear, Ravalli, Montana",1785617880000,46.168,-113.889,"https://irwin.doi.gov/observer/incidents/2026-MTBRF-000282",1469.0,"acres","Wildfires"],["EONET_22127","fire","Wildfire Semi 270, Woodward, Oklahoma",1785617460000,36.514,-99.516,"https://irwin.doi.gov/observer/incidents/2026-OKOKS-260786",682.0,"acres","Wildfires"],["EONET_22115","fire","Wildfire Eggo, Wallowa, Oregon",1785616080000,45.67,-117.087,"https://irwin.doi.gov/observer/incidents/2026-OR974S-000423",3774.0,"acres","Wildfires"],["EONET_22125","fire","Wildfire HUDSPETH, Stevens, Washington",1785612720000,48.088,-118.159,"https://irwin.doi.gov/observer/incidents/2026-WANES-001860",4211.0,"acres","Wildfires"],["EONET_22104","fire","Wildfire AUTUMN LANE, Spokane, Washington",1785610140000,47.794,-117.613,"https://irwin.doi.gov/observer/incidents/2026-WANES-001857",3351.0,"acres","Wildfires"],["EONET_22110","fire","Wildfire FELIZ, Mendocino, California",1785609540000,38.992,-123.161,"https://irwin.doi.gov/observer/incidents/2026-CAMEU-008929",872.0,"acres","Wildfires"],["EONET_22119","fire","Wildfire 0658 ROUND BUTTE, Jefferson, Oregon",1785609120000,44.6,-121.225,"https://irwin.doi.gov/observer/incidents/2026-OROCF-000658",1039.0,"acres","Wildfires"],["EONET_22111","fire","Wildfire FAIRVIEW, Spokane, Washington",1785606120000,47.751,-117.358,"https://irwin.doi.gov/observer/incidents/2026-WANES-001852",1056.0,"acres","Wildfires"],["EONET_22116","fire","Wildfire Sand Creek, Beaverhead, Montana",1785602340000,45.555,-113.326,"https://irwin.doi.gov/observer/incidents/2026-MTBDF-266319",1000.0,"acres","Wildfires"],["EONET_22112","fire","Wildfire OLD TRAILS, Spokane, Washington",1785597060000,47.684,-117.533,"https://irwin.doi.gov/observer/incidents/2026-WANES-001845",3619.0,"acres","Wildfires"],["EONET_22128","fire","Wildfire Potato Creek, Jackson, South Dakota",1785586200000,43.563,-102.073,"https://irwin.doi.gov/observer/incidents/2026-SDPRA-260748",8969.3,"acres","Wildfires"],["EONET_22106","fire","Wildfire Big Rock, Jefferson, Idaho",1785529620000,43.638,-111.664,"https://irwin.doi.gov/observer/incidents/2026-IDIFD-000152",2482.0,"acres","Wildfires"],["EONET_22121","fire","Wildfire Bobcat Lakes, Beaverhead, Montana",1785522540000,45.637,-113.204,"https://irwin.doi.gov/observer/incidents/2026-MTBDF-266313",755.0,"acres","Wildfires"],["EONET_22100","fire","Wildfire Lumin, Sheridan, Wyoming",1785519960000,44.824,-106.409,"https://irwin.doi.gov/observer/incidents/2026-WYSHX-000363",7267.0,"acres","Wildfires"],["EONET_22114","fire","Wildfire Ant Park, Meagher, Montana",1785519960000,46.736,-110.64,"https://irwin.doi.gov/observer/incidents/2026-MTHLF-000529",700.0,"acres","Wildfires"],["EONET_22103","fire","Wildfire Ward, White Pine, Nevada",1785506580000,39.103,-114.895,"https://irwin.doi.gov/observer/incidents/2026-NVHTF-040303",8200.0,"acres","Wildfires"],["EONET_22120","fire","Wildfire Black Canyon, Sanpete, Utah",1785446760000,39.383,-111.308,"https://irwin.doi.gov/observer/incidents/2026-UTMLF-005244",500.0,"acres","Wildfires"],["EONET_22202","fire","Wildfire Moose Mountain, Clearwater, Idaho",1785415020000,46.775,-115.217,"https://irwin.doi.gov/observer/incidents/2026-IDNCF-000349",660.0,"acres","Wildfires"],["EONET_21965","fire","Wildfire Camden McCarthy Overpass Fire, Camden, Georgia",1785370440000,30.978,-81.667,"https://irwin.doi.gov/observer/incidents/2026-GAGAS-042702",600.0,"acres","Wildfires"],["EONET_22448","fire","Wildfire Lake Channel, Power, Idaho",1785360960000,42.665,-113.02,"https://irwin.doi.gov/observer/incidents/2026-IDTFD-000999",2516.39,"acres","Wildfires"],["EONET_22608","fire","Wildfire Grotto, Idaho, Idaho",1785355020000,46.256,-115.094,"https://irwin.doi.gov/observer/incidents/2026-IDNCF-000348",900.0,"acres","Wildfires"],["EONET_22123","fire","Wildfire Skillet, Lincoln, Montana",1785351300000,48.491,-114.867,"https://irwin.doi.gov/observer/incidents/2026-MTFNF-000306",1318.0,"acres","Wildfires"],["EONET_21968","fire","Wildfire Duhamel, Pennington, South Dakota",1785349440000,44.437,-102.27,"https://irwin.doi.gov/observer/incidents/2026-SDPNX-260761",531.0,"acres","Wildfires"],["EONET_21976","fire","Wildfire HOLEY LAND (6), Broward, Florida",1785268380000,26.26,-80.812,"https://irwin.doi.gov/observer/incidents/2026-FLFLS-261800117",3900.0,"acres","Wildfires"],["EONET_22118","fire","Wildfire Rio Blanco, Archuleta, Colorado",1785259680000,37.125,-106.985,"https://irwin.doi.gov/observer/incidents/2026-COSJF-000806",1083.0,"acres","Wildfires"],["EONET_21977","fire","Wildfire L 28, Broward, Florida",1785232380000,26.24,-80.829,"https://irwin.doi.gov/observer/incidents/2026-FLSET-002349",1000.0,"acres","Wildfires"],["EONET_21966","fire","Wildfire Widemouth 2, Millard, Utah",1785179940000,38.729,-112.499,"https://irwin.doi.gov/observer/incidents/2026-UTFIF-260341",5926.0,"acres","Wildfires"],["EONET_21973","fire","Wildfire Potato Creek, Jackson, South Dakota",1785172920000,43.563,-102.073,"https://irwin.doi.gov/observer/incidents/2026-SDPRA-000126",9000.0,"acres","Wildfires"],["EONET_21971","fire","Wildfire FISH, Kern, California",1785165060000,35.282,-118.65,"https://irwin.doi.gov/observer/incidents/2026-CAKRN-031524",4201.0,"acres","Wildfires"],["EONET_21969","fire","Wildfire Rayado Mesa, Colfax, New Mexico",1785164940000,36.326,-104.85,"https://irwin.doi.gov/observer/incidents/2026-NMN2S-000560",934.0,"acres","Wildfires"],["EONET_21829","fire","Wildfire Fairpoint, Meade, South Dakota",1785151260000,44.764,-102.844,"https://irwin.doi.gov/observer/incidents/2026-SDSDS-260728",510.0,"acres","Wildfires"],["EONET_21972","fire","Wildfire Kohns, Campbell, Wyoming",1785148560000,44.456,-105.096,"https://irwin.doi.gov/observer/incidents/2026-WYCMX-000338",2700.0,"acres","Wildfires"]],"iss":[[1790580961,-49.0594,-86.2347,434.7,27547.8],[1790581261,-51.6656,-57.3461,437.22,27539.8],[1790581561,-46.5101,-30.0426,436.77,27537.4],[1790581861,-35.8026,-9.8227,433.93,27540.2],[1790582161,-22.2176,4.7507,430.1,27546.3],[1790582461,-7.3485,16.4109,426.89,27553.4],[1790582761,7.8834,27.2261,425.41,27559.5],[1790583061,22.7381,38.9627,425.82,27563.9],[1790583361,36.2733,53.7199,427.31,27567.4],[1790583661,46.8444,74.2634,428.5,27571.2],[1790583961,51.7184,101.8742,428.2,27576.4],[1790584261,48.765,130.6904,425.93,27583.2],[1790584561,39.3477,153.1417,422.26,27590.3],[1790584861,26.3444,169.1274,418.57,27595.6],[1790585161,11.6808,-178.5646,416.48,27596.7],[1790585461,-3.568,-167.6539,417.17,27592.2],[1790585761,-18.638,-156.3396,420.79,27582.1],[1790586061,-32.6798,-142.6746,426.32,27568.6],[1790586361,-44.31,-124.0544,432.01,27554.8],[1790586661,-51.0919,-98.2759,436.08,27543.9]],"weather":[[-21.298,168.61,21.9,24.5,0.0,1],[50.053,-130.221,14.9,36.8,0.1,51],[-21.224,168.355,21.6,25.1,0.0,2],[-21.225,168.427,21.8,24.8,0.0,2],[-21.206,168.546,21.9,24.4,0.0,2],[-57.67,-25.279,-3.3,48.0,0.0,3],[-59.059,-25.895,-4.7,47.3,0.0,3],[35.386,99.554,1.0,13.2,0.0,3],[-21.397,168.229,21.3,23.7,0.0,0],[12.8,-99.5,27.7,61.8,0.4,80],[19.3,-23.3,26.1,13.2,0.0,3],[16.2,-159.8,27.8,62.4,0.2,53],[26.6,130.9,28.2,60.9,0.1,51],[31.053,-88.838,19.7,7.6,0.0,0],[32.858,-91.989,20.8,6.0,0.0,3],[36.602,-118.972,15.3,10.5,0.0,0]]}</script>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
+
+/* ================================================================ utils */
+const $ = s => document.querySelector(s);
+const DEG = Math.PI / 180;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const isMobile = matchMedia('(max-width: 760px)').matches;
+const FORCE_OFFLINE = /[?&]offline\b/.test(location.search);
+const SNAP = (() => { try { return JSON.parse($('#snapshot').textContent || '{}'); } catch { return {}; } })();
+const lsGet = k => { try { return JSON.parse(localStorage.getItem('earthpulse:' + k)); } catch { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem('earthpulse:' + k, JSON.stringify(v)); } catch {} };
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const easeInOut = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const easeOutQuint = t => 1 - Math.pow(1 - t, 5);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+function ll2v(lat, lon, r = 1, out = new THREE.Vector3()) {
+  const phi = (90 - lat) * DEG, th = (lon + 180) * DEG;
+  return out.set(-r * Math.sin(phi) * Math.cos(th), r * Math.cos(phi), r * Math.sin(phi) * Math.sin(th));
+}
+function v2ll(v) {
+  const n = v.clone().normalize();
+  const lat = 90 - Math.acos(clamp(n.y, -1, 1)) / DEG;
+  let lon = Math.atan2(n.z, -n.x) / DEG - 180;
+  lon = ((lon + 540) % 360) - 180;
+  return { lat, lon };
+}
+function agoStr(ms) {
+  const s = Math.max(0, ms / 1000);
+  if (s < 60) return Math.round(s) + 's ago';
+  if (s < 3600) return Math.round(s / 60) + 'm ago';
+  if (s < 86400) { const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60); return h + 'h ' + (m ? m + 'm ' : '') + 'ago'; }
+  return Math.round(s / 86400) + 'd ago';
+}
+const fmtUTC = ms => new Date(ms).toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+const fmtLL = (lat, lon) => `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? 'N' : 'S'} ${Math.abs(lon).toFixed(2)}°${lon >= 0 ? 'E' : 'W'}`;
+function gcKm(a, b, c, d) { const p = ll2v(a, b), q = ll2v(c, d); return p.angleTo(q) * 6371; }
+
+function toast(msg, ms = 2600) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), ms);
+}
+async function fetchJSON(url, timeout = 7000) {
+  if (FORCE_OFFLINE) throw new Error('offline forced');
+  const ctl = new AbortController(); const id = setTimeout(() => ctl.abort(), timeout);
+  try { const r = await fetch(url, { signal: ctl.signal, cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return await r.json(); }
+  finally { clearTimeout(id); }
+}
+
+/* ================================================================ clock */
+// Data "now": live => wall clock, snapshot => capture time. Sim time flows 1x from there.
+const clock = {
+  mode: 'snapshot', base: SNAP.captured || Date.now(), perf0: performance.now(),
+  simT: 0, following: true, playing: false, speed: 300,
+  now() { return this.base + (performance.now() - this.perf0); },
+};
+clock.simT = clock.now();
+const EPOCH = clock.base - 7 * 86400000; // float-precision anchor for shader times (seconds)
+
+/* ================================================================ sun */
+function subsolar(ms) {
+  const d = ms / 86400000 + 2440587.5 - 2451545.0;
+  const g = (357.529 + 0.98560028 * d) * DEG;
+  const q = 280.459 + 0.98564736 * d;
+  const L = (q + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * DEG;
+  const e = (23.439 - 0.00000036 * d) * DEG;
+  const RA = Math.atan2(Math.cos(e) * Math.sin(L), Math.cos(L));
+  const dec = Math.asin(Math.sin(e) * Math.sin(L));
+  const gmst = ((18.697374558 + 24.06570982441908 * d) % 24 + 24) % 24;
+  let lon = RA / DEG - gmst * 15; lon = ((lon + 540) % 360 + 360) % 360 - 180;
+  return { lat: dec / DEG, lon };
+}
+
+/* ================================================================ renderer */
+const stage = $('#stage');
+const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance', alpha: false });
+const PR = Math.min(devicePixelRatio || 1, isMobile ? 1.5 : 2);
+renderer.setPixelRatio(PR);
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.setClearColor(0x02050d, 1);
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(isMobile ? 48 : 38, innerWidth / innerHeight, 0.005, 2000);
+camera.position.set(0, 6, 40);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.06;
+controls.enablePan = false; controls.minDistance = 1.22; controls.maxDistance = 14;
+controls.rotateSpeed = 0.45; controls.zoomSpeed = 0.7;
+controls.autoRotate = false; controls.autoRotateSpeed = 0.28;
+controls.enabled = false;
+
+// Multisampled targets proved unreliable on some GPU/driver paths (blank or offset output), so render
+// single-sampled HDR and finish with FXAA on low-DPI screens instead.
+const rt = new THREE.WebGLRenderTarget(Math.max(1, innerWidth * PR), Math.max(1, innerHeight * PR), { type: THREE.HalfFloatType });
+const composer = new EffectComposer(renderer, rt);
+composer.setPixelRatio(PR);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.75, 0.55, 0.82);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const fxaa = new ShaderPass(FXAAShader);
+fxaa.enabled = PR < 1.5;
+composer.addPass(fxaa);
+
+/* ================================================================ textures */
+const manager = new THREE.LoadingManager();
+let texReady = false;
+manager.onProgress = (u, l, t) => { $('#arc').style.strokeDashoffset = 276.46 * (1 - l / t * .92); };
+manager.onLoad = () => { texReady = true; };
+const tl = new THREE.TextureLoader(manager);
+const maxAniso = renderer.capabilities.getMaxAnisotropy();
+function tex(url, srgb) { const t = tl.load(url); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, maxAniso); return t; }
+const dayTex = tex('assets/earth-blue-marble.jpg', true);
+const nightTex = tex('assets/earth-night.jpg', true);
+const topoTex = tex('assets/earth-topology.png', false);
+const waterTex = tex('assets/earth-water.png', false);
+const skyTex = tex('assets/night-sky.png', true);
+
+/* ================================================================ procedural cloud bake */
+const NOISE = /* glsl */`
+vec3 mod289(vec3 x){return x-floor(x*(1./289.))*289.;}
+vec4 mod289(vec4 x){return x-floor(x*(1./289.))*289.;}
+vec4 permute(vec4 x){return mod289(((x*34.)+1.)*x);}
+vec4 taylorInvSqrt(vec4 r){return 1.79284291400159-0.85373472095314*r;}
+float snoise(vec3 v){
+  const vec2 C=vec2(1./6.,1./3.);const vec4 D=vec4(0.,.5,1.,2.);
+  vec3 i=floor(v+dot(v,C.yyy));vec3 x0=v-i+dot(i,C.xxx);
+  vec3 g=step(x0.yzx,x0.xyz);vec3 l=1.-g;vec3 i1=min(g.xyz,l.zxy);vec3 i2=max(g.xyz,l.zxy);
+  vec3 x1=x0-i1+C.xxx;vec3 x2=x0-i2+C.yyy;vec3 x3=x0-D.yyy;
+  i=mod289(i);
+  vec4 p=permute(permute(permute(i.z+vec4(0.,i1.z,i2.z,1.))+i.y+vec4(0.,i1.y,i2.y,1.))+i.x+vec4(0.,i1.x,i2.x,1.));
+  float n_=.142857142857;vec3 ns=n_*D.wyz-D.xzx;
+  vec4 j=p-49.*floor(p*ns.z*ns.z);vec4 x_=floor(j*ns.z);vec4 y_=floor(j-7.*x_);
+  vec4 x=x_*ns.x+ns.yyyy;vec4 y=y_*ns.x+ns.yyyy;vec4 h=1.-abs(x)-abs(y);
+  vec4 b0=vec4(x.xy,y.xy);vec4 b1=vec4(x.zw,y.zw);
+  vec4 s0=floor(b0)*2.+1.;vec4 s1=floor(b1)*2.+1.;vec4 sh=-step(h,vec4(0.));
+  vec4 a0=b0.xzyw+s0.xzyw*sh.xxyy;vec4 a1=b1.xzyw+s1.xzyw*sh.zzww;
+  vec3 p0=vec3(a0.xy,h.x);vec3 p1=vec3(a0.zw,h.y);vec3 p2=vec3(a1.xy,h.z);vec3 p3=vec3(a1.zw,h.w);
+  vec4 norm=taylorInvSqrt(vec4(dot(p0,p0),dot(p1,p1),dot(p2,p2),dot(p3,p3)));
+  p0*=norm.x;p1*=norm.y;p2*=norm.z;p3*=norm.w;
+  vec4 m=max(.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.);m=m*m;
+  return 42.*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
+}
+float fbm(vec3 p){float a=.5,s=0.;for(int i=0;i<7;i++){s+=a*snoise(p);p=p*2.03+vec3(1.7,9.2,3.1);a*=.5;}return s;}
+`;
+const CLOUD_W = isMobile ? 1024 : 2048;
+const cloudRT = new THREE.WebGLRenderTarget(CLOUD_W, CLOUD_W / 2, { wrapS: THREE.RepeatWrapping, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter, magFilter: THREE.LinearFilter });
+cloudRT.texture.wrapS = THREE.RepeatWrapping;
+(function bakeClouds() {
+  const mat = new THREE.ShaderMaterial({
+    vertexShader: `varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`,
+    fragmentShader: NOISE + `varying vec2 vUv;
+    void main(){
+      float lon=(vUv.x*2.-1.)*3.14159265; float lat=(vUv.y-.5)*3.14159265;
+      vec3 p=vec3(cos(lat)*cos(lon), sin(lat), cos(lat)*sin(lon));
+      float al=abs(lat);
+      // zonal stretch: squash the noise domain vertically to get banded, streaky systems
+      vec3 q=p*vec3(2.2,3.6,2.2);
+      vec3 w=vec3(fbm(q+vec3(0.,0.,1.3)),fbm(q+vec3(5.2,1.3,2.8)),fbm(q+vec3(2.1,7.7,4.4)));
+      float f=fbm(q*1.6+w*1.35)*.5+.5;
+      float swirl=fbm(p*9.+w*2.)*.5+.5;
+      f=mix(f,f*(.6+swirl*.8),.3);
+      // climatology: ITCZ + storm tracks cloudy, subtropics clear
+      float cov=.54 + .07*exp(-pow((al-.95)/.25,2.)) - .13*exp(-pow(al/.1,2.)) + .12*exp(-pow((al-.42)/.13,2.)) - .06*exp(-pow((al-1.45)/.2,2.));
+      float d=smoothstep(cov-.02,cov+.3,f);
+      d=pow(d,1.5);
+      gl_FragColor=vec4(d,d,d,1.);
+    }`,
+    depthTest: false, depthWrite: false,
+  });
+  const q = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat);
+  const s = new THREE.Scene(); s.add(q);
+  const oc = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  renderer.setRenderTarget(cloudRT); renderer.render(s, oc); renderer.setRenderTarget(null);
+  mat.dispose(); q.geometry.dispose();
+})();
+
+/* ================================================================ scene: globe */
+const sunDir = new THREE.Vector3(1, 0, 0);
+const U = {
+  uTime: { value: 0 }, uSun: { value: sunDir }, uLights: { value: 1 }, uCloudOff: { value: 0 }, uCloudsOn: { value: 1 },
+};
+const globeMat = new THREE.ShaderMaterial({
+  uniforms: {
+    uDay: { value: dayTex }, uNight: { value: nightTex }, uTopo: { value: topoTex }, uWater: { value: waterTex }, uClouds: { value: cloudRT.texture },
+    uSun: U.uSun, uLights: U.uLights, uCloudOff: U.uCloudOff, uCloudsOn: U.uCloudsOn, uTexel: { value: new THREE.Vector2(1 / 4096, 1 / 2048) },
+  },
+  vertexShader: `varying vec2 vUv;varying vec3 vN;varying vec3 vW;
+    void main(){vUv=uv;vN=normalize(mat3(modelMatrix)*normal);vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}`,
+  fragmentShader: `uniform sampler2D uDay,uNight,uTopo,uWater,uClouds;uniform vec3 uSun;uniform float uLights,uCloudOff,uCloudsOn;uniform vec2 uTexel;
+    varying vec2 vUv;varying vec3 vN;varying vec3 vW;
+    void main(){
+      vec3 n=normalize(vN);
+      vec3 east=normalize(cross(vec3(0.,1.,0.),n)+vec3(1e-5,0.,0.));
+      vec3 north=cross(n,east);
+      float h=texture2D(uTopo,vUv).r;
+      float hx=texture2D(uTopo,vUv+vec2(uTexel.x*2.,0.)).r-h;
+      float hy=texture2D(uTopo,vUv+vec2(0.,uTexel.y*2.)).r-h;
+      vec3 bn=normalize(n-(east*hx+north*hy)*2.2);
+      vec3 V=normalize(cameraPosition-vW);
+      float sd=dot(n,uSun);
+      float sdb=dot(bn,uSun);
+      float water=texture2D(uWater,vUv).r;
+      vec3 day=texture2D(uDay,vUv).rgb;
+      float lum=dot(day,vec3(.2126,.7152,.0722));
+      day=mix(vec3(lum),day,1.18);
+      day*=mix(vec3(1.),vec3(.78,.9,1.08),water);
+      // cloud shadow (sampled offset toward the sun)
+      vec2 cuv=vec2(vUv.x+uCloudOff,vUv.y);
+      vec3 sT=uSun-n*sd; vec2 sh=vec2(dot(sT,east),dot(sT,north))*.004;
+      float cs=texture2D(uClouds,cuv-sh).r*uCloudsOn;
+      float lit=smoothstep(-.06,.35,sdb);
+      vec3 col=day*(lit*1.55+.012)*(1.-cs*.45);
+      // city lights on the night side, and faintly through twilight
+      vec3 nl=texture2D(uNight,vUv).rgb;
+      nl=pow(nl,vec3(1.35))*vec3(1.0,.74,.44)*3.2;
+      float night=1.-smoothstep(-.22,.06,sd);
+      col+=nl*night*uLights*(1.-cs*.7);
+      col+=day*vec3(.018,.03,.055)*night; // faint earthshine so continents read on the night side
+      // twilight scattering band
+      float tw=exp(-pow((sd+.02)*6.5,2.));
+      col+=vec3(1.,.36,.12)*tw*.10*(.4+lum);
+      // ocean glint
+      vec3 H=normalize(uSun+V);
+      float nh=max(dot(n,H),0.);
+      float spec=pow(nh,110.)*2.2+pow(nh,18.)*.12;
+      col+=vec3(1.,.9,.74)*spec*water*smoothstep(-.02,.25,sd)*(1.-cs*.8);
+      // atmospheric limb haze
+      float nv=max(dot(n,V),0.);
+      float fres=pow(1.-nv,3.2);
+      vec3 haze=mix(vec3(1.,.45,.2),vec3(.28,.62,1.),smoothstep(-.05,.35,sd));
+      col=mix(col,haze*(smoothstep(-.25,.4,sd)*1.0+.03),pow(1.-nv,4.)*.6);
+      col+=vec3(.2,.78,1.)*pow(1.-nv,5.)*(.12+.5*smoothstep(-.3,.4,sd));
+      gl_FragColor=vec4(col,1.);
+    }`,
+});
+const earth = new THREE.Mesh(new THREE.SphereGeometry(1, isMobile ? 128 : 192, isMobile ? 64 : 96), globeMat);
+scene.add(earth);
+
+/* clouds */
+const cloudMat = new THREE.ShaderMaterial({
+  uniforms: { uClouds: { value: cloudRT.texture }, uSun: U.uSun, uCloudOff: U.uCloudOff },
+  vertexShader: `varying vec2 vUv;varying vec3 vN;varying vec3 vW;
+    void main(){vUv=uv;vN=normalize(mat3(modelMatrix)*normal);vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}`,
+  fragmentShader: `uniform sampler2D uClouds;uniform vec3 uSun;uniform float uCloudOff;varying vec2 vUv;varying vec3 vN;varying vec3 vW;
+    void main(){
+      vec3 n=normalize(vN);
+      float d=texture2D(uClouds,vec2(vUv.x+uCloudOff,vUv.y)).r;
+      float d2=texture2D(uClouds,vec2(vUv.x*1.0+uCloudOff*1.6+.37,vUv.y)).r;
+      d=max(d,d2*.35);
+      float sd=dot(n,uSun);
+      float lit=smoothstep(-.14,.3,sd);
+      vec3 V=normalize(cameraPosition-vW);
+      float edge=pow(1.-max(dot(n,V),0.),2.);
+      vec3 c=mix(vec3(.015,.02,.035),vec3(1.05,1.05,1.08),lit);
+      c=mix(c,vec3(1.,.55,.3),exp(-pow((sd-.02)*7.,2.))*.55);
+      float a=d*(.92-edge*.5);
+      gl_FragColor=vec4(c*a,a);
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.CustomBlending,
+  blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
+});
+const clouds = new THREE.Mesh(new THREE.SphereGeometry(1.009, 128, 64), cloudMat);
+scene.add(clouds);
+
+/* atmosphere (outer shell, ray-geometric glow) */
+const atmoMat = new THREE.ShaderMaterial({
+  uniforms: { uSun: U.uSun },
+  vertexShader: `varying vec3 vW;void main(){vec4 w=modelMatrix*vec4(position,1.);vW=w.xyz;gl_Position=projectionMatrix*viewMatrix*w;}`,
+  fragmentShader: `uniform vec3 uSun;varying vec3 vW;
+    void main(){
+      vec3 ro=cameraPosition; vec3 rd=normalize(vW-ro);
+      float t=max(dot(-ro,rd),0.);
+      vec3 P=ro+rd*t; float b=length(P);
+      float x=clamp((b-1.)/.16,0.,1.);
+      float g=pow(1.-x,3.2)*1.35 + pow(1.-x,14.)*1.6;
+      if(b<1.)g=0.;
+      float inside=smoothstep(1.17,1.08,length(ro));
+      g*=mix(1.,smoothstep(.02,.35,t)*.55,inside);
+      float s=dot(normalize(P),uSun);
+      vec3 day=vec3(.2,.62,1.)*1.25; vec3 dusk=vec3(1.,.42,.16);
+      vec3 c=mix(dusk,day,smoothstep(-.05,.45,s));
+      float k=smoothstep(-.42,.25,s)*.95+.05;
+      gl_FragColor=vec4(c*g*k,1.);
+    }`,
+  side: THREE.BackSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+const atmo = new THREE.Mesh(new THREE.SphereGeometry(1.16, 96, 48), atmoMat);
+scene.add(atmo);
+
+/* sky: Milky Way texture + procedural twinkling stars */
+const sky = new THREE.Mesh(new THREE.SphereGeometry(900, 48, 24), new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, color: new THREE.Color(0.32, 0.36, 0.46), depthWrite: false }));
+sky.rotation.set(0.4, 0, 0.9);
+scene.add(sky);
+{
+  const N = 3500, pos = new Float32Array(N * 3), a = new Float32Array(N * 4);
+  for (let i = 0; i < N; i++) {
+    const u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, r = 600;
+    const s = Math.sqrt(1 - u * u);
+    pos.set([r * s * Math.cos(th), r * u, r * s * Math.sin(th)], i * 3);
+    const temp = Math.random();
+    a.set([Math.pow(Math.random(), 6) * 3.2 + .6, Math.random() * 6.28, temp, Math.random()], i * 4);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('aS', new THREE.BufferAttribute(a, 4));
+  const m = new THREE.ShaderMaterial({
+    uniforms: { uTime: U.uTime, uPR: { value: PR } },
+    vertexShader: `attribute vec4 aS;uniform float uTime,uPR;varying vec3 vC;varying float vA;
+      void main(){vec4 mv=modelViewMatrix*vec4(position,1.);gl_Position=projectionMatrix*mv;
+        float tw=.75+.25*sin(uTime*(1.+aS.w*2.)+aS.y);
+        gl_PointSize=aS.x*uPR*tw;
+        vC=mix(vec3(.7,.82,1.),vec3(1.,.86,.7),aS.z);vA=tw*min(1.,aS.x*.6);}`,
+    fragmentShader: `varying vec3 vC;varying float vA;void main(){float d=length(gl_PointCoord-.5);float f=smoothstep(.5,.0,d);gl_FragColor=vec4(vC*f*vA*1.4,1.);}`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  scene.add(new THREE.Points(g, m));
+}
+
+/* sun glare sprite */
+function radialTex(stops, size = 256) {
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const x = c.getContext('2d'); const g = x.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  stops.forEach(([o, col]) => g.addColorStop(o, col)); x.fillStyle = g; x.fillRect(0, 0, size, size);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: radialTex([[0, 'rgba(255,255,255,1)'], [.08, 'rgba(255,246,220,.95)'], [.22, 'rgba(255,200,120,.28)'], [.5, 'rgba(255,160,80,.06)'], [1, 'rgba(0,0,0,0)']]), blending: THREE.AdditiveBlending, depthWrite: false, color: new THREE.Color(3, 2.8, 2.5) }));
+sun.scale.setScalar(26);
+scene.add(sun);
+
+/* ================================================================ data model */
+const data = { quakes: [], events: [], iss: [], weather: SNAP.weather || [] };
+const live = { quakes: false, eonet: false, iss: false };
+
+function parseSnapQuakes(rows) { return (rows || []).map(r => ({ id: r[0], kind: 'quake', mag: r[1], time: r[2], lat: r[3], lon: r[4], depth: r[5], tsunami: !!r[6], sig: r[7], place: r[8] })); }
+function parseSnapEvents(rows) { return (rows || []).map(r => ({ id: r[0], kind: r[1], title: r[2], time: r[3], lat: r[4], lon: r[5], url: r[6], magv: r[7], magu: r[8], cat: r[9] })); }
+function parseUSGS(fc) {
+  return (fc.features || []).filter(f => f.properties.mag != null).map(f => ({
+    id: f.id, kind: 'quake', mag: +f.properties.mag, time: f.properties.time, lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0],
+    depth: f.geometry.coordinates[2] || 0, tsunami: !!f.properties.tsunami, sig: f.properties.sig || 0, place: f.properties.place || 'Unknown location',
+  }));
+}
+const eonetKind = c => ({ wildfires: 'fire', volcanoes: 'volcano', severeStorms: 'storm', seaLakeIce: 'ice' }[c] || 'other');
+function parseEONET(list) {
+  const out = [], seen = new Set();
+  for (const e of list) {
+    if (seen.has(e.id) || !e.geometry?.length) continue; seen.add(e.id);
+    const g = e.geometry[e.geometry.length - 1]; let lat, lon;
+    if (g.type === 'Point') { [lon, lat] = g.coordinates; }
+    else { const ring = g.coordinates[0]; lon = ring.reduce((s, p) => s + p[0], 0) / ring.length; lat = ring.reduce((s, p) => s + p[1], 0) / ring.length; }
+    const cat = e.categories?.[0];
+    out.push({ id: e.id, kind: eonetKind(cat?.id), title: e.title, time: Date.parse(g.date), lat, lon, url: e.sources?.[0]?.url || e.link, magv: g.magnitudeValue, magu: g.magnitudeUnit, cat: cat?.title || 'Event' });
+  }
+  return out;
+}
+function mergeQuakes(a, b) { const m = new Map(); [...a, ...b].forEach(q => m.set(q.id, q)); return [...m.values()].sort((x, y) => y.time - x.time); }
+
+/* ================================================================ quake layer (instanced) */
+const DEPTH_STOPS = [[0, [1.0, .72, .28]], [35, [1.0, .42, .23]], [70, [1.0, .25, .45]], [160, [.76, .3, 1.0]], [320, [.42, .45, 1.0]], [700, [.22, .82, 1.0]]];
+function depthColor(d) {
+  for (let i = 1; i < DEPTH_STOPS.length; i++) {
+    if (d <= DEPTH_STOPS[i][0]) { const [d0, c0] = DEPTH_STOPS[i - 1], [d1, c1] = DEPTH_STOPS[i]; const t = (d - d0) / (d1 - d0); return c0.map((v, k) => lerp(v, c1[k], t)); }
+  }
+  return DEPTH_STOPS[DEPTH_STOPS.length - 1][1];
+}
+const depthCss = d => { const c = depthColor(d); return `rgb(${c.map(v => Math.round(v * 255)).join(',')})`; };
+const QU = { uTime: U.uTime, uNow: { value: 0 }, uFlash: { value: 2 }, uAnim: { value: reduceMotion ? .25 : 1 }, uSel: { value: -1 } };
+
+const ringMat = new THREE.ShaderMaterial({
+  uniforms: QU,
+  vertexShader: `attribute vec3 aColor;attribute vec4 aData;uniform float uNow,uFlash;varying vec2 vUv;varying vec3 vCol;varying vec4 vD;varying float vAge;
+    void main(){vUv=uv*2.-1.;vCol=aColor;vD=aData;vAge=uNow-aData.y;
+      float grow=1.+2.*exp(-max(vAge,0.)/uFlash);
+      vec3 p=position*grow;
+      gl_Position=projectionMatrix*modelViewMatrix*instanceMatrix*vec4(p,1.);
+      if(vAge<0.)gl_Position=vec4(2.,2.,2.,1.);}`,
+  fragmentShader: `uniform float uTime,uFlash,uAnim;varying vec2 vUv;varying vec3 vCol;varying vec4 vD;varying float vAge;
+    void main(){
+      float r=length(vUv); if(r>1.)discard;
+      bool tsu=vD.w>.5;
+      float sp=(tsu?.12:.34+.05*vD.x)*uAnim;
+      float a=0.;
+      for(int i=0;i<3;i++){
+        float t=fract(uTime*sp+vD.z+float(i)/3.);
+        float w=.035+.05*t;
+        a+=smoothstep(w,0.,abs(r-t))*pow(1.-t,1.6);
+      }
+      float recent=1.-smoothstep(0.,3600.,vAge);
+      float flash=exp(-vAge/uFlash);
+      float pulse=.55+.45*sin(uTime*5.+vD.z*6.28);
+      float I=(.55+1.9*recent*pulse+4.*flash);
+      if(tsu){ a*=.8; I*=.8; }
+      else a+=smoothstep(.14,.0,r)*1.2;
+      gl_FragColor=vec4(vCol*I*a,a);
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+});
+const pillarMat = new THREE.ShaderMaterial({
+  uniforms: QU,
+  vertexShader: `attribute vec3 aColor;attribute vec4 aData;uniform float uNow,uFlash;varying float vY;varying vec3 vCol;varying float vAge;varying float vPh;
+    void main(){vY=position.y;vCol=aColor;vAge=uNow-aData.y;vPh=aData.z;
+      float grow=smoothstep(0.,uFlash*.8,vAge);
+      vec3 p=vec3(position.x,position.y*grow,position.z);
+      gl_Position=projectionMatrix*modelViewMatrix*instanceMatrix*vec4(p,1.);
+      if(vAge<0.)gl_Position=vec4(2.,2.,2.,1.);}`,
+  fragmentShader: `uniform float uTime,uFlash;varying float vY;varying vec3 vCol;varying float vAge;varying float vPh;
+    void main(){
+      float recent=1.-smoothstep(0.,3600.,vAge);
+      float flash=exp(-vAge/uFlash);
+      float a=pow(1.-vY,1.8)*(.5+.9*recent*(.6+.4*sin(uTime*5.+vPh*6.28))+3.*flash);
+      float scan=.75+.25*sin(vY*40.-uTime*6.);
+      gl_FragColor=vec4(vCol*a*scan*1.6,a);
+    }`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+});
+const ringGeo = new THREE.PlaneGeometry(1, 1);
+const pillarGeo = new THREE.CylinderGeometry(1, .35, 1, 8, 1, true); pillarGeo.translate(0, .5, 0);
+const quakeGroup = new THREE.Group(); scene.add(quakeGroup);
+let ringMesh = null, pillarMesh = null;
+const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), Z = new THREE.Vector3(0, 0, 1), Y = new THREE.Vector3(0, 1, 0);
+function buildQuakes() {
+  if (ringMesh) { quakeGroup.remove(ringMesh, pillarMesh); ringMesh.dispose(); pillarMesh.dispose(); }
+  const qs = data.quakes; const tsu = qs.filter(q => q.tsunami);
+  const nR = qs.length + tsu.length, nP = qs.length;
+  const rg = ringGeo.clone(), pg = pillarGeo.clone();
+  const rC = new Float32Array(nR * 3), rD = new Float32Array(nR * 4), pC = new Float32Array(nP * 3), pD = new Float32Array(nP * 4);
+  ringMesh = new THREE.InstancedMesh(rg, ringMat, Math.max(1, nR));
+  pillarMesh = new THREE.InstancedMesh(pg, pillarMat, Math.max(1, nP));
+  ringMesh.count = nR; pillarMesh.count = nP;
+  let k = 0;
+  const put = (q, isT) => {
+    const n = ll2v(q.lat, q.lon, 1).normalize();
+    const m = Math.max(q.mag, .5);
+    const size = isT ? .1 + .025 * m : .018 + .011 * Math.pow(m, 1.55);
+    _q.setFromUnitVectors(Z, n); _p.copy(n).multiplyScalar(1.0025); _s.set(size, size, size);
+    ringMesh.setMatrixAt(k, _m.compose(_p, _q, _s));
+    const c = isT ? [.25, .7, 1.0] : depthColor(q.depth);
+    rC.set(c, k * 3); rD.set([q.mag, (q.time - EPOCH) / 1000, (hash(q.id) % 1000) / 1000, isT ? 1 : 0], k * 4); k++;
+  };
+  qs.forEach(q => put(q, false)); tsu.forEach(q => put(q, true));
+  qs.forEach((q, i) => {
+    const n = ll2v(q.lat, q.lon, 1).normalize(); const m = Math.max(q.mag, .5);
+    const h = .012 * Math.pow(m, 1.75), w = .0016 + .0005 * m;
+    _q.setFromUnitVectors(Y, n); _p.copy(n).multiplyScalar(1.001); _s.set(w, h, w);
+    pillarMesh.setMatrixAt(i, _m.compose(_p, _q, _s));
+    pC.set(depthColor(q.depth), i * 3); pD.set([q.mag, (q.time - EPOCH) / 1000, (hash(q.id) % 1000) / 1000, 0], i * 4);
+  });
+  rg.setAttribute('aColor', new THREE.InstancedBufferAttribute(rC, 3)); rg.setAttribute('aData', new THREE.InstancedBufferAttribute(rD, 4));
+  pg.setAttribute('aColor', new THREE.InstancedBufferAttribute(pC, 3)); pg.setAttribute('aData', new THREE.InstancedBufferAttribute(pD, 4));
+  ringMesh.frustumCulled = pillarMesh.frustumCulled = false;
+  ringMesh.renderOrder = 2; pillarMesh.renderOrder = 3;
+  quakeGroup.add(ringMesh, pillarMesh);
+}
+function hash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+
+/* ================================================================ EONET particles */
+const EU = { uTime: U.uTime, uPR: { value: PR }, uScale: { value: isMobile ? 2.4 : 3.0 }, uShow: { value: new THREE.Vector4(1, 1, 1, 1) }, uAnim: { value: reduceMotion ? .3 : 1 } };
+const eventMat = new THREE.ShaderMaterial({
+  uniforms: EU,
+  vertexShader: `uniform float uTime,uPR,uScale,uAnim;uniform vec4 uShow;attribute vec3 aBase;attribute vec4 aSeed;varying vec3 vCol;varying float vA;
+    void main(){
+      vec3 n=normalize(aBase);
+      vec3 e=normalize(cross(vec3(0.,1.,0.),n)+vec3(1e-5,0.,0.)); vec3 no=cross(n,e);
+      float s=aSeed.x,type=aSeed.y,r1=aSeed.z,r2=aSeed.w; float T=uTime*uAnim;
+      vec3 p; float size; vec3 col; float a;
+      if(type<.5){ // fire embers
+        float t=fract(T*(.3+.35*r1)+s);
+        float ang=r2*6.2831+t*1.5; float rad=.0055*sqrt(r1)+.003*t;
+        p=n*(1.0015+t*.03*(.4+r2))+(e*cos(ang)+no*sin(ang))*rad;
+        size=mix(5.8,1.4,t)*(.6+.7*r1);
+        col=mix(vec3(3.,.62,.1),vec3(1.5,.1,.02),smoothstep(0.,.5,t));
+        a=(1.-t)*smoothstep(0.,.08,t)*.8*uShow.x;
+      } else if(type<1.5){ // volcanic plume
+        float t=fract(T*(.06+.05*r1)+s);
+        float ang=r2*6.2831+t*2.5; float rad=.0025+t*t*.028*(.4+r1);
+        p=n*(1.002+t*.085)+(e*cos(ang)+no*sin(ang))*rad+e*t*t*.025;
+        size=mix(3.5,15.,t);
+        col=mix(vec3(3.6,1.1,.25),vec3(.32,.33,.38),smoothstep(0.,.22,t));
+        a=(1.-t)*smoothstep(0.,.04,t)*.55*uShow.y;
+      } else if(type<2.5){ // storm spiral
+        float arm=floor(r1*3.);
+        float rr=pow(s,.65);
+        float ang=arm*2.0944+log(.04+rr)*2.3-T*.5*(1.3-rr);
+        float R=.085*rr;
+        p=n*(1.013+.002*r2)+(e*cos(ang)+no*sin(ang))*R+(e*(r2-.5)+no*(fract(r2*7.3)-.5))*.008*rr;
+        size=mix(4.5,2.,rr);
+        col=mix(vec3(1.6,2.1,2.6),vec3(.45,1.,1.8),rr);
+        a=(1.-rr*.85)*.55*uShow.z;
+      } else { // ice / other: slow orbiting sparkle
+        float t=fract(T*.2+s); float ang=s*6.2831+T*.25;
+        float R=(.006+.01*r1)*(1.+.2*sin(t*6.2831));
+        p=n*1.003+(e*cos(ang)+no*sin(ang))*R;
+        size=2.6; col=type<3.5?vec3(1.1,2.3,2.7):vec3(2.,1.7,2.6); a=(.35+.35*sin(t*6.2831))*uShow.w;
+      }
+      vec4 mv=modelViewMatrix*vec4(p,1.);
+      gl_Position=projectionMatrix*mv;
+      gl_PointSize=a<=.001?0.:size*uPR*(uScale/-mv.z);
+      vCol=col;vA=a;
+    }`,
+  fragmentShader: `varying vec3 vCol;varying float vA;void main(){float d=length(gl_PointCoord-.5);float f=smoothstep(.5,0.,d);f*=f;gl_FragColor=vec4(vCol*vA*f,vA*f);}`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+let eventPoints = null;
+const KIND_T = { fire: 0, volcano: 1, storm: 2, ice: 3, other: 4 };
+const KIND_N = { fire: 14, volcano: 90, storm: 170, ice: 10, other: 10 };
+function buildEvents() {
+  if (eventPoints) { scene.remove(eventPoints); eventPoints.geometry.dispose(); }
+  let total = 0; data.events.forEach(e => total += KIND_N[e.kind]);
+  const base = new Float32Array(total * 3), seed = new Float32Array(total * 4); let k = 0;
+  const v = new THREE.Vector3();
+  for (const e of data.events) {
+    ll2v(e.lat, e.lon, 1, v); const N = KIND_N[e.kind]; const h = hash(e.id);
+    for (let i = 0; i < N; i++) {
+      base.set([v.x, v.y, v.z], k * 3);
+      const r = mulberry(h + i * 7919);
+      seed.set([e.kind === 'storm' ? i / N : r(), KIND_T[e.kind], r(), r()], k * 4); k++;
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(base, 3));
+  g.setAttribute('aBase', new THREE.BufferAttribute(base, 3));
+  g.setAttribute('aSeed', new THREE.BufferAttribute(seed, 4));
+  eventPoints = new THREE.Points(g, eventMat); eventPoints.frustumCulled = false; eventPoints.renderOrder = 4;
+  scene.add(eventPoints);
+}
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+/* ================================================================ selection reticle */
+const reticle = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({
+  uniforms: { uTime: U.uTime },
+  vertexShader: `varying vec2 vUv;void main(){vUv=uv*2.-1.;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader: `uniform float uTime;varying vec2 vUv;void main(){float r=length(vUv);float a=atan(vUv.y,vUv.x);
+    float ring=smoothstep(.03,0.,abs(r-.82))*step(.35,fract(a*6./6.2831+uTime*.15));
+    float inner=smoothstep(.015,0.,abs(r-.62))*.5;
+    float tick=smoothstep(.02,0.,abs(r-.95))*step(.9,fract(a*24./6.2831));
+    float al=ring+inner+tick; gl_FragColor=vec4(vec3(.25,.85,1.)*al*1.8,al);}`,
+  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+}));
+reticle.visible = false; reticle.renderOrder = 5; scene.add(reticle);
+function placeReticle(lat, lon, size = .09) {
+  const n = ll2v(lat, lon, 1).normalize(); reticle.position.copy(n).multiplyScalar(1.004);
+  reticle.quaternion.setFromUnitVectors(Z, n); reticle.scale.setScalar(size); reticle.visible = true;
+}
+
+/* ================================================================ ISS */
+const OMEGA_E = 360 / 86164.0905; // deg/s
+const N_ORB = 2 * Math.PI / (92.68 * 60);
+const issGroup = new THREE.Group(); scene.add(issGroup);
+const issBody = new THREE.Group(); issGroup.add(issBody);
+{
+  const mBody = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 2.3, 2.4) });
+  const mPanel = new THREE.MeshBasicMaterial({ color: new THREE.Color(.9, .75, .3), side: THREE.DoubleSide });
+  const truss = new THREE.Mesh(new THREE.BoxGeometry(.012, .0009, .0009), mBody);
+  const mod = new THREE.Mesh(new THREE.BoxGeometry(.0012, .0012, .006), mBody);
+  issBody.add(truss, mod);
+  for (const x of [-.0055, -.0035, .0035, .0055]) for (const z of [-.0022, .0022]) {
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(.0016, .0036), mPanel); p.rotation.x = -Math.PI / 2; p.position.set(x, 0, z); issBody.add(p);
+  }
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: radialTex([[0, 'rgba(255,255,255,1)'], [.15, 'rgba(160,235,255,.8)'], [.4, 'rgba(57,208,255,.18)'], [1, 'rgba(0,0,0,0)']], 128), blending: THREE.AdditiveBlending, depthWrite: false, color: new THREE.Color(1.6, 1.8, 2) }));
+  glow.scale.setScalar(.06); issGroup.add(glow); issGroup.userData.glow = glow;
+}
+const TRAIL_N = 240;
+function trailLine(alphaScale) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL_N * 3), 3));
+  const k = new Float32Array(TRAIL_N); for (let i = 0; i < TRAIL_N; i++) k[i] = i / (TRAIL_N - 1) * 2 - 1; g.setAttribute('aK', new THREE.BufferAttribute(k, 1));
+  const m = new THREE.ShaderMaterial({
+    uniforms: { uA: { value: alphaScale }, uTime: U.uTime },
+    vertexShader: `attribute float aK;varying float vK;void main(){vK=aK;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+    fragmentShader: `uniform float uA,uTime;varying float vK;void main(){
+      float a=vK<0.?pow(1.+vK,2.2):.28*(1.-vK)*step(.5,fract(vK*40.-uTime*.5));
+      gl_FragColor=vec4(vec3(.3,.85,1.)*a*uA*1.6,a*uA);}`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  const l = new THREE.Line(g, m); l.frustumCulled = false; return l;
+}
+const issTrail = trailLine(1.0), issGround = trailLine(.35);
+scene.add(issTrail, issGround);
+const issState = { lat: 0, lon: 0, alt: 420, vel: 27600, pos: new THREE.Vector3(), fwd: new THREE.Vector3(), up: new THREE.Vector3(), ok: false };
+const modelCache = new Map();
+function fitModel(a, b) {
+  const key = a.t + ':' + b.t; if (modelCache.has(key)) return modelCache.get(key);
+  const pa = ll2v(a.lat, a.lon, 1).normalize();
+  const pb = ll2v(b.lat, b.lon + OMEGA_E * (b.t - a.t), 1).normalize();
+  const axis = new THREE.Vector3().crossVectors(pa, pb).normalize();
+  let rate = pa.angleTo(pb) / (b.t - a.t);
+  if (!(rate > .00095 && rate < .00125)) rate = N_ORB;
+  const m = { t0: a.t, p0: pa, axis, rate, a, b }; modelCache.set(key, m); return m;
+}
+function issModelAt(T) { // T seconds
+  const f = data.iss; if (f.length < 2) return null;
+  let i = f.findIndex(x => x.t > T);
+  let a, b;
+  if (i === -1) { b = f[f.length - 1]; a = f[f.length - 2]; for (let j = f.length - 2; j >= 0 && b.t - f[j].t < 20; j--) a = f[j - 1] || f[j]; }
+  else if (i === 0) { a = f[0]; b = f[1]; }
+  else { a = f[i - 1]; b = f[i]; if (b.t - a.t < 20) { a = f[Math.max(0, i - 2)]; } }
+  if (!a || !b || a.t === b.t) return null;
+  return fitModel(a, b);
+}
+const _r = new THREE.Vector3();
+function issAt(T, out = new THREE.Vector3()) {
+  const m = issModelAt(T); if (!m) return null;
+  const dt = T - m.t0;
+  out.copy(m.p0).applyAxisAngle(m.axis, m.rate * dt).applyAxisAngle(Y, -OMEGA_E * dt * DEG);
+  return out;
+}
+function issAlt(T) {
+  const f = data.iss; if (!f.length) return 420;
+  const i = f.findIndex(x => x.t > T); if (i <= 0) return (i === 0 ? f[0] : f[f.length - 1]).alt;
+  const a = f[i - 1], b = f[i]; return lerp(a.alt, b.alt, (T - a.t) / (b.t - a.t));
+}
+function issVel(T) { const f = data.iss; if (!f.length) return 27600; let best = f[0]; for (const x of f) if (Math.abs(x.t - T) < Math.abs(best.t - T)) best = x; return best.vel; }
+let trailClock = 0;
+function updateISS(simMs, force) {
+  const T = simMs / 1000;
+  const p = issAt(T, issState.pos); if (!p) { issGroup.visible = issTrail.visible = issGround.visible = false; issState.ok = false; return; }
+  issState.ok = true;
+  const alt = issAlt(T); const r = 1 + alt / 6371;
+  const ll = v2ll(p); issState.lat = ll.lat; issState.lon = ll.lon; issState.alt = alt; issState.vel = issVel(T);
+  const ahead = issAt(T + 4, _r).clone().normalize();
+  issState.up.copy(p).normalize();
+  issState.fwd.copy(ahead).sub(issState.up).normalize();
+  p.normalize().multiplyScalar(r);
+  issGroup.position.copy(p);
+  issBody.quaternion.setFromRotationMatrix(new THREE.Matrix4().lookAt(new THREE.Vector3(), issState.fwd, issState.up));
+  const gl = issGroup.userData.glow; gl.scale.setScalar(ride.on ? .004 : .05 + .012 * Math.sin(performance.now() / 300));
+  if (force || performance.now() - trailClock > 250) {
+    trailClock = performance.now();
+    const a = issTrail.geometry.attributes.position, g = issGround.geometry.attributes.position;
+    const v = new THREE.Vector3();
+    for (let i = 0; i < TRAIL_N; i++) {
+      const tt = T + (i / (TRAIL_N - 1) * 2 - 1) * 50 * 60;
+      if (!issAt(tt, v)) continue; v.normalize();
+      a.setXYZ(i, v.x * r, v.y * r, v.z * r); g.setXYZ(i, v.x * 1.0015, v.y * 1.0015, v.z * 1.0015);
+    }
+    a.needsUpdate = g.needsUpdate = true;
+  }
+}
+
+/* ================================================================ picking */
+const markers = []; // {kind,id,lat,lon,pos,ref}
+function rebuildMarkers() {
+  markers.length = 0;
+  for (const q of data.quakes) markers.push({ kind: 'quake', ref: q, pos: ll2v(q.lat, q.lon, 1.003) });
+  for (const e of data.events) markers.push({ kind: e.kind, ref: e, pos: ll2v(e.lat, e.lon, 1.003) });
+}
+function layerOnFor(kind) {
+  return { quake: layers.quakes, fire: layers.fires, volcano: layers.volcanoes, storm: layers.storms, ice: layers.other, other: layers.other, iss: layers.iss }[kind];
+}
+const _v = new THREE.Vector3();
+function occluded(p) {
+  // ray from camera to p: does it hit the unit sphere first?
+  const o = camera.position; const d = _v.copy(p).sub(o); const L = d.length(); d.divideScalar(L);
+  const b = o.dot(d), c = o.lengthSq() - .998; const disc = b * b - c; if (disc < 0) return false;
+  const t = -b - Math.sqrt(disc); return t > 0 && t < L - 1e-3;
+}
+function toScreen(p) { const v = p.clone().project(camera); return { x: (v.x * .5 + .5) * innerWidth, y: (-v.y * .5 + .5) * innerHeight, z: v.z }; }
+function pick(x, y) {
+  let best = null, bd = isMobile ? 26 : 18;
+  if (layers.iss && issState.ok) { const s = toScreen(issGroup.position); const d = Math.hypot(s.x - x, s.y - y); if (d < bd + 6 && !occluded(issGroup.position)) { best = { kind: 'iss' }; bd = d; } }
+  for (const m of markers) {
+    if (!layerOnFor(m.kind)) continue;
+    if (m.kind === 'quake' && m.ref.time > clock.simT) continue;
+    if (m.pos.dot(camera.position) < 1.0) continue; // far hemisphere
+    const s = toScreen(m.pos); const d = Math.hypot(s.x - x, s.y - y) - (m.kind === 'quake' ? m.ref.mag * .6 : 0);
+    if (d < bd && !occluded(m.pos)) { bd = d; best = m; }
+  }
+  return best;
+}
+
+/* ================================================================ camera flights */
+let flight = null;
+function flyTo(lat, lon, dist = 2.3, opts = {}) {
+  cancelRide();
+  const toDir = ll2v(lat, lon, 1).normalize();
+  if (reduceMotion || opts.cut) {
+    camera.position.copy(toDir).multiplyScalar(dist); camera.lookAt(0, 0, 0); controls.update(); flight = null; controls.enabled = !cine.on; return;
+  }
+  const fromPos = camera.position.clone(); const fromDir = fromPos.clone().normalize(); const fromDist = fromPos.length();
+  const ang = fromDir.angleTo(toDir);
+  flight = {
+    t0: performance.now(), dur: opts.dur || (1100 + 1300 * ang / Math.PI + Math.abs(fromDist - dist) * 60),
+    q: new THREE.Quaternion().setFromUnitVectors(fromDir, toDir), fromDir, fromDist, dist, lift: opts.lift ?? Math.min(1.1, ang * .55), ease: opts.ease || easeInOut, done: opts.done,
+  };
+  controls.enabled = false; controls.autoRotate = false;
+}
+const _qi = new THREE.Quaternion();
+function stepFlight(now) {
+  if (!flight) return;
+  const t = clamp((now - flight.t0) / flight.dur, 0, 1); const k = flight.ease(t);
+  _qi.identity().slerp(flight.q, k);
+  const dir = flight.fromDir.clone().applyQuaternion(_qi);
+  const d = lerp(flight.fromDist, flight.dist, k) + flight.lift * Math.sin(Math.PI * k);
+  camera.position.copy(dir.multiplyScalar(d)); camera.lookAt(0, 0, 0);
+  if (t >= 1) { const f = flight; flight = null; controls.enabled = !cine.on && !ride.on; controls.update(); f.done && f.done(); }
+}
+function flyToItem(item, dist) {
+  if (item.kind === 'iss') { const ll = issState; flyTo(ll.lat, ll.lon, dist || 2.0); return; }
+  const r = item.ref; const zoom = dist || (item.kind === 'quake' ? clamp(2.6 - r.mag * .12, 1.7, 2.4) : item.kind === 'storm' ? 2.2 : 1.9);
+  flyTo(r.lat, r.lon, zoom);
+}
+
+/* ================================================================ ride along */
+const ride = { on: false, lookAt: new THREE.Vector3(), up: new THREE.Vector3(0, 1, 0) };
+function startRide() {
+  if (!issState.ok) return; closeInfo(); flight = null; ride.on = true; document.body.classList.add('ride');
+  controls.enabled = false; controls.autoRotate = false; ride.blend = 0; ride.from = camera.position.clone();
+  toast('Riding with the ISS · Esc to exit');
+}
+function cancelRide() {
+  if (!ride.on) return; ride.on = false; document.body.classList.remove('ride');
+  camera.up.set(0, 1, 0);
+  const d = Math.max(2.2, camera.position.length() + 1); camera.position.setLength(d); camera.lookAt(0, 0, 0);
+  controls.enabled = !cine.on; controls.update();
+}
+function stepRide(dt) {
+  if (!ride.on) return;
+  const P = issGroup.position, F = issState.fwd, Up = issState.up;
+  const desired = P.clone().addScaledVector(F, -.075).addScaledVector(Up, .028);
+  const look = P.clone().addScaledVector(F, .22).addScaledVector(Up, -.07);
+  ride.blend = Math.min(1, ride.blend + dt * (reduceMotion ? 99 : .5));
+  const k = reduceMotion ? 1 : easeInOut(ride.blend);
+  if (ride.blend < 1) camera.position.lerpVectors(ride.from, desired, k); else camera.position.copy(desired);
+  camera.up.lerp(Up, reduceMotion ? 1 : .08).normalize();
+  ride.lookAt.lerp(look, ride.blend < 1 ? k : .2); if (ride.blend < .02) ride.lookAt.copy(look);
+  camera.lookAt(ride.blend < 1 ? new THREE.Vector3().lerpVectors(new THREE.Vector3(), look, k) : ride.lookAt);
+}
+
+/* ================================================================ cinematic tour */
+const cine = { on: false, i: 0, timer: null, stops: [] };
+function tourStops() {
+  const s = [];
+  const qs = [...data.quakes].sort((a, b) => (b.sig || b.mag * 100) - (a.sig || a.mag * 100));
+  const used = [];
+  for (const q of qs) { if (used.some(u => gcKm(u.lat, u.lon, q.lat, q.lon) < 600)) continue; used.push(q); s.push({ kind: 'quake', ref: q }); if (s.length >= 3) break; }
+  const vol = data.events.find(e => e.kind === 'volcano'); if (vol) s.push({ kind: 'volcano', ref: vol });
+  const st = [...data.events].filter(e => e.kind === 'storm').sort((a, b) => (b.magv || 0) - (a.magv || 0))[0]; if (st) s.push({ kind: 'storm', ref: st });
+  for (const q of qs) { if (s.length >= 5) break; if (!s.some(x => x.ref === q)) s.push({ kind: 'quake', ref: q }); }
+  return s.slice(0, 5);
+}
+function startCine() {
+  if (cine.on) return; cancelRide(); closeInfo(); cine.on = true; document.body.classList.add('cine');
+  cine.stops = tourStops(); cine.i = 0; controls.enabled = false; nextStop();
+}
+function stopCine() {
+  if (!cine.on) return; cine.on = false; clearTimeout(cine.timer); document.body.classList.remove('cine'); $('#caption').classList.remove('run');
+  controls.enabled = !flight; reticle.visible = false;
+}
+function nextStop() {
+  if (!cine.on || !cine.stops.length) return;
+  const st = cine.stops[cine.i % cine.stops.length]; const r = st.ref;
+  const cap = $('#caption'); cap.classList.remove('run');
+  $('#c-idx').textContent = String(cine.i % cine.stops.length + 1).padStart(2, '0') + ' / ' + String(cine.stops.length).padStart(2, '0') + '  ·  ' + (st.kind === 'quake' ? 'SEISMIC' : st.kind.toUpperCase());
+  $('#c-title').textContent = st.kind === 'quake' ? `M ${r.mag.toFixed(1)} — ${r.place}` : r.title;
+  $('#c-sub').textContent = `${fmtLL(r.lat, r.lon)}  ·  ${agoStr(clock.simT - r.time)}${st.kind === 'quake' ? '  ·  ' + r.depth.toFixed(0) + ' km deep' : ''}`;
+  requestAnimationFrame(() => cap.classList.add('run'));
+  placeReticle(r.lat, r.lon, st.kind === 'storm' ? .2 : .1);
+  const dist = st.kind === 'storm' ? 2.1 : 1.75;
+  flyTo(r.lat - 6, r.lon + 8, dist, { dur: 2600, lift: .9 });
+  cine.i++;
+  cine.timer = setTimeout(nextStop, 6000);
+}
+
+/* ================================================================ HUD: layers */
+const layers = Object.assign({ quakes: true, iss: true, fires: true, volcanoes: true, storms: true, other: true, clouds: true, lights: true }, lsGet('layers') || {});
+function applyLayers() {
+  quakeGroup.visible = layers.quakes;
+  issGroup.visible = issTrail.visible = issGround.visible = layers.iss && issState.ok;
+  EU.uShow.value.set(+layers.fires, +layers.volcanoes, +layers.storms, +layers.other);
+  clouds.visible = layers.clouds; U.uCloudsOn.value = +layers.clouds;
+  document.querySelectorAll('#toggles .tg').forEach(b => b.classList.toggle('on', !!layers[b.dataset.l]));
+  $('#isslabel').style.display = layers.iss ? '' : 'none';
+}
+let lightsTarget = layers.lights ? 1 : 0;
+$('#toggles').addEventListener('click', e => {
+  const b = e.target.closest('.tg'); if (!b) return; const l = b.dataset.l; layers[l] = !layers[l];
+  if (l === 'lights') lightsTarget = layers.lights ? 1 : 0;
+  lsSet('layers', layers); applyLayers(); renderFeed();
+});
+
+/* ================================================================ HUD: feed */
+let feedFilter = lsGet('filter') || 'all';
+const ICON = {
+  fire: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 4 5 5.5 5 11a5 5 0 0 1-10 0c0-2.2 1-3.8 2.3-5 .1 1.6.8 2.7 2 3.1C10.6 8.4 11 5 12 2z"/></svg>',
+  volcano: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 9h6l6 12H3z" opacity=".9"/><circle cx="10" cy="5" r="1.6"/><circle cx="14" cy="3.5" r="1.2"/><circle cx="12.5" cy="6.5" r="1"/></svg>',
+  storm: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0M5 7c3-4 10-4 13 0M19 17c-3 4-10 4-13 0"/></svg>',
+  ice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7"/></svg>',
+  other: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>',
+};
+const KIND_COLOR = { fire: '#ff8a2a', volcano: '#ff5b3f', storm: '#bfefff', ice: '#9ff3ff', other: '#c9b8ff' };
+const KIND_LABEL = { quake: 'Earthquake', fire: 'Wildfire', volcano: 'Volcano', storm: 'Severe storm', ice: 'Sea & lake ice', other: 'Natural event' };
+let selectedId = null;
+function feedItems() {
+  const all = [...data.quakes.map(q => ({ kind: 'quake', ref: q })), ...data.events.map(e => ({ kind: e.kind, ref: e }))];
+  const f = feedFilter === 'other' ? k => k === 'ice' || k === 'other' : feedFilter === 'all' ? () => true : k => k === feedFilter;
+  return all.filter(i => f(i.kind)).sort((a, b) => b.ref.time - a.ref.time);
+}
+function renderFeed() {
+  const items = feedItems(); const feed = $('#feed');
+  $('#feedcount').textContent = items.length + ' SIGNALS';
+  const shown = items.slice(0, 160);
+  if (!shown.length) { feed.innerHTML = '<div class="empty">No events in this category right now.</div>'; return; }
+  feed.innerHTML = shown.map(({ kind, ref: r }) => {
+    const g = kind === 'quake' ? `<div class="glyph" style="color:${depthCss(r.depth)}">${r.mag.toFixed(1)}</div>` : `<div class="glyph" style="color:${KIND_COLOR[kind]}">${ICON[kind]}</div>`;
+    const t = kind === 'quake' ? esc(r.place) : esc(r.title);
+    const s = kind === 'quake' ? `M${r.mag.toFixed(1)} · ${r.depth.toFixed(0)} km${r.tsunami ? ' · TSUNAMI FLAG' : ''}` : `${esc(r.cat)}${r.magv ? ' · ' + r.magv + ' ' + esc(r.magu || '') : ''}`;
+    return `<div class="row${r.id === selectedId ? ' sel' : ''}${kind === 'quake' && r.time > clock.simT ? ' future' : ''}" role="listitem" tabindex="0" data-id="${esc(r.id)}" data-kind="${kind}">${g}<div style="min-width:0"><div class="t">${t}</div><div class="s">${s}</div></div><div class="ago" data-t="${r.time}">${agoStr(clock.simT - r.time).replace(' ago', '')}</div></div>`;
+  }).join('');
+}
+function findItem(id) {
+  const q = data.quakes.find(x => x.id === id); if (q) return { kind: 'quake', ref: q };
+  const e = data.events.find(x => x.id === id); if (e) return { kind: e.kind, ref: e };
+  return null;
+}
+$('#feed').addEventListener('click', e => {
+  const row = e.target.closest('.row'); if (!row) return; const it = findItem(row.dataset.id); if (it) select(it, true);
+  if (isMobile) $('#sheet').classList.remove('open');
+});
+$('#feed').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.closest('.row')?.click(); });
+$('#chips').addEventListener('click', e => {
+  const c = e.target.closest('.chip'); if (!c) return; feedFilter = c.dataset.f; lsSet('filter', feedFilter);
+  document.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === c)); renderFeed();
+});
+document.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x.dataset.f === feedFilter));
+
+/* mobile sheet */
+$('#tabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return; const sh = $('#sheet');
+  if (sh.dataset.tab === b.dataset.tab && sh.classList.contains('open')) sh.classList.remove('open');
+  else { sh.dataset.tab = b.dataset.tab; sh.classList.add('open'); }
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x.dataset.tab === sh.dataset.tab));
+});
+if (isMobile) $('#sheet').classList.add('glass');
+
+/* ================================================================ info card */
+const info = $('#info');
+let infoItem = null;
+function kv(k, v) { return `<div class="kv"><div class="k">${k}</div><div class="v">${v}</div></div>`; }
+function openInfo(item) {
+  infoItem = item; const r = item.ref;
+  let h = `<button class="close" aria-label="Close" id="infoclose"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
+  if (item.kind === 'quake') {
+    const col = depthCss(r.depth);
+    h += `<div class="info-kind"><span class="pill" style="color:${col}">Earthquake</span>${r.tsunami ? '<span class="pill" style="color:#39d0ff">Tsunami flag</span>' : ''}${clock.simT - r.time < 3600e3 ? '<span class="pill" style="color:#39ff9c">Last hour</span>' : ''}</div>
+      <div class="info-big num" style="color:${col}">M${r.mag.toFixed(1)}<small>${magWord(r.mag)}</small></div>
+      <div class="info-title">${esc(r.place)}</div>
+      <div class="info-grid">${kv('Depth', r.depth.toFixed(1) + ' km')}${kv('When', agoStr(clock.simT - r.time))}${kv('UTC', new Date(r.time).toISOString().slice(5, 16).replace('T', ' '))}${kv('Significance', r.sig || '—')}
+        <div class="kv" style="grid-column:1/-1"><div class="k">Depth profile · shallow → deep</div><div class="depthbar"><i style="left:${clamp(Math.sqrt(r.depth / 700) * 100, 0, 100)}%"></i></div></div></div>
+      <div class="info-actions"><a class="btn" href="https://earthquake.usgs.gov/earthquakes/eventpage/${encodeURIComponent(r.id)}" target="_blank" rel="noopener">USGS event page ↗</a>${sample ? '<button class="btn primary" id="explainbtn">Explain this event</button>' : ''}</div>`;
+  } else if (item.kind === 'iss') {
+    h += `<div class="info-kind"><span class="pill" style="color:#39d0ff">Spacecraft</span></div>
+      <div class="info-big num" style="color:#8be6ff">ISS</div><div class="info-title">International Space Station · NORAD 25544</div>
+      <div class="info-grid">${kv('Speed', Math.round(issState.vel).toLocaleString() + ' km/h')}${kv('Altitude', issState.alt.toFixed(0) + ' km')}${kv('Position', fmtLL(issState.lat, issState.lon))}${kv('Orbit', '92.7 min · 51.6°')}</div>
+      <div class="info-actions"><button class="btn primary" id="rideinfo">Ride along</button></div>`;
+  } else {
+    const col = KIND_COLOR[item.kind];
+    h += `<div class="info-kind"><span class="pill" style="color:${col}">${esc(r.cat)}</span></div>
+      <div class="info-title" style="font-size:20px;margin-top:14px">${esc(r.title)}</div>
+      <div class="info-grid">${kv('Updated', agoStr(clock.simT - r.time))}${kv('Position', fmtLL(r.lat, r.lon))}${r.magv ? kv('Magnitude', r.magv + ' ' + esc(r.magu || '')) : ''}${kv('Source', 'NASA EONET')}</div>
+      <div class="info-actions">${/^https?:\/\//i.test(r.url || '') ? `<a class="btn" href="${esc(r.url)}" target="_blank" rel="noopener">Source ↗</a>` : ''}${sample ? '<button class="btn primary" id="explainbtn">Explain this event</button>' : ''}</div>`;
+  }
+  h += `<div id="explain"></div>`;
+  if (item.kind !== 'iss') h += `<section class="av" id="av" aria-label="Actual view of the event area"></section>`;
+  info.innerHTML = h; info.classList.add('show'); info.scrollTop = 0;
+  $('#infoclose').onclick = closeInfo;
+  if (item.kind !== 'iss') mountActualView(item); else av = null;
+  $('#explainbtn') && ($('#explainbtn').onclick = () => explain(item));
+  $('#rideinfo') && ($('#rideinfo').onclick = startRide);
+}
+function closeInfo() { info.classList.remove('show'); infoItem = null; av = null; selectedId = null; reticle.visible = false; $('#sellabel').style.opacity = 0; document.querySelectorAll('.row.sel').forEach(r => r.classList.remove('sel')); }
+function magWord(m) { return m >= 8 ? 'GREAT' : m >= 7 ? 'MAJOR' : m >= 6 ? 'STRONG' : m >= 5 ? 'MODERATE' : m >= 4 ? 'LIGHT' : m >= 3 ? 'MINOR' : 'MICRO'; }
+function select(item, fly) {
+  stopCine();
+  if (item.kind !== 'iss') { selectedId = item.ref.id; placeReticle(item.ref.lat, item.ref.lon, item.kind === 'storm' ? .2 : item.kind === 'quake' ? clamp(.03 + .012 * item.ref.mag, .05, .12) : .06); }
+  document.querySelectorAll('.row').forEach(r => r.classList.toggle('sel', r.dataset.id === selectedId));
+  openInfo(item); if (fly) flyToItem(item);
+}
+
+/* ================================================================ actual view
+   A real picture of the event area inside the info card.
+   - EONET events: NASA GIBS WMS 1.3.0 (EPSG:4326, BBOX order is lat,lon), daily true-color swaths,
+     optional thermal-anomaly overlay for fires. Plain <img>, so no CORS is needed; GIBS does send
+     Access-Control-Allow-Origin:* so we can also peek at the pixels to spot "no pass yet" days.
+   - Earthquakes: USGS event detail -> ShakeMap intensity image when one exists, else GIBS view. */
+const GIBS_WMS = 'https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi';
+const AV_SATS = [
+  { id: 'terra', label: 'Terra', name: 'MODIS Terra', layer: 'MODIS_Terra_CorrectedReflectance_TrueColor', fire: 'MODIS_Terra_Thermal_Anomalies_All' },
+  { id: 'aqua', label: 'Aqua', name: 'MODIS Aqua', layer: 'MODIS_Aqua_CorrectedReflectance_TrueColor', fire: 'MODIS_Aqua_Thermal_Anomalies_All' },
+  { id: 'viirs', label: 'VIIRS', name: 'VIIRS SNPP', layer: 'VIIRS_SNPP_CorrectedReflectance_TrueColor', fire: 'VIIRS_SNPP_Thermal_Anomalies_375m_All' },
+];
+const AV_SPAN = { fire: 1.5, volcano: 1, storm: 12, ice: 6, other: 3, quake: 2 }; // degrees of latitude shown
+const AV_MIN_DATE = '2000-03-01';
+const ymd = ms => new Date(ms).toISOString().slice(0, 10);
+const addDay = (d, n) => ymd(Date.parse(d + 'T00:00:00Z') + n * 86400e3);
+let av = null;
+function avBox(lat, lon, span) {
+  // 8:5 frame; widen longitude by 1/cos(lat) so ground features keep their shape in plate carrée
+  const la = span / 2, lo = clamp(span * 1.6 / Math.max(.25, Math.cos(lat * DEG)), span, 300) / 2;
+  let minLat = lat - la, maxLat = lat + la, minLon = lon - lo, maxLon = lon + lo;
+  if (minLat < -90) { maxLat += -90 - minLat; minLat = -90; } if (maxLat > 90) { minLat -= maxLat - 90; maxLat = 90; }
+  if (minLon < -180) { maxLon += -180 - minLon; minLon = -180; } if (maxLon > 180) { minLon -= maxLon - 180; maxLon = 180; }
+  return { minLat, minLon, maxLat, maxLon, x: (lon - minLon) / (maxLon - minLon) * 100, y: (maxLat - lat) / (maxLat - minLat) * 100 };
+}
+const f4 = v => (+v).toFixed(4);
+function gibsUrl(layer, b, date, png) {
+  return `${GIBS_WMS}?SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=${layer}&STYLES=&CRS=EPSG:4326&BBOX=${[b.minLat, b.minLon, b.maxLat, b.maxLon].map(f4).join(',')}&WIDTH=640&HEIGHT=400&FORMAT=${png ? 'image/png&TRANSPARENT=TRUE' : 'image/jpeg'}&TIME=${date}`;
+}
+function worldviewUrl(b, date, layers) {
+  return `https://worldview.earthdata.nasa.gov/?v=${[b.minLon, b.minLat, b.maxLon, b.maxLat].map(f4).join(',')}&t=${date}${layers ? '&l=' + layers.join(',') : ''}`;
+}
+// A GIBS day with no swath over the area comes back black. Sample a thumbnail to detect it.
+function avBlank(img) {
+  try {
+    const c = avBlank.c || (avBlank.c = document.createElement('canvas')); c.width = 40; c.height = 25;
+    const x = c.getContext('2d', { willReadFrequently: true }); x.clearRect(0, 0, 40, 25); x.drawImage(img, 0, 0, 40, 25);
+    const d = x.getImageData(0, 0, 40, 25).data; let n = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i] + d[i + 1] + d[i + 2] < 14) n++;
+    return n / 1000 > .45;
+  } catch { return false; } // tainted canvas: assume fine
+}
+function mountActualView(item) {
+  const host = $('#av'); if (!host) { av = null; return; }
+  const r = item.ref, today = ymd(Date.now());
+  let date = ymd(isFinite(r.time) ? r.time : Date.now()); if (date > today) date = today;
+  const sat = lsGet('avsat');
+  av = { item, host, box: avBox(r.lat, r.lon, AV_SPAN[item.kind] || 3), date, sat: AV_SATS.some(s => s.id === sat) ? sat : 'terra',
+    fire: item.kind === 'fire', auto: 3, tok: 0, mode: item.kind === 'quake' ? 'wait' : 'sat', quake: null };
+  host.addEventListener('click', avClick);
+  renderAV();
+  if (item.kind === 'quake') loadQuakeDetail(av);
+}
+async function loadQuakeDetail(a) {
+  let d = null;
+  try { d = await fetchJSON(`https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/${encodeURIComponent(a.item.ref.id)}.geojson`, 9000); } catch {}
+  if (a !== av) return;
+  const p = d?.properties?.products || {};
+  const sm = p.shakemap?.[0], url = sm?.contents?.['download/intensity.jpg']?.url, dy = p.dyfi?.[0];
+  a.quake = {
+    shake: /^https:\/\//.test(url || '') ? url : null, mmi: +sm?.properties?.maxmmi || null,
+    dyfi: dy ? +(dy.properties?.numResp || d.properties?.felt || 0) : null, cdi: +dy?.properties?.maxmmi || null,
+  };
+  a.mode = a.quake.shake ? 'shake' : 'sat'; renderAV();
+}
+function avClick(e) {
+  const b = e.target.closest('button[data-av]'); if (!b || !av || b.disabled) return;
+  const [k, v] = b.dataset.av.split(':');
+  if (k === 'd') { av.auto = 0; av.date = addDay(av.date, +v); }
+  else if (k === 's') { av.sat = v; lsSet('avsat', v); }
+  else if (k === 'f') av.fire = !av.fire;
+  else if (k === 'm') av.mode = v;
+  renderAV();
+}
+const avChev = dir => `<svg width="8" height="9" viewBox="0 0 8 9" fill="currentColor" aria-hidden="true"><path d="${dir < 0 ? 'M7 0v9L0 4.5z' : 'M1 0v9l7-4.5z'}"/></svg>`;
+function renderAV() {
+  const a = av; if (!a || !a.host.isConnected) return;
+  const r = a.item.ref, b = a.box, q = a.quake, sat = AV_SATS.find(s => s.id === a.sat) || AV_SATS[0], today = ymd(Date.now());
+  const isFire = a.item.kind === 'fire', where = esc(r.place || r.title || 'event area');
+  let ctl = '', row = '', frame, cap;
+  if (q?.shake) row += `<button data-av="m:shake" class="${a.mode === 'shake' ? 'on' : ''}" aria-pressed="${a.mode === 'shake'}">ShakeMap</button><button data-av="m:sat" class="${a.mode === 'sat' ? 'on' : ''}" aria-pressed="${a.mode === 'sat'}">Satellite</button>`;
+  if (a.mode === 'wait') {
+    frame = `<div class="av-frame"><div class="av-sk"></div></div>`;
+    cap = `<span>Fetching USGS event products…</span>`;
+  } else if (a.mode === 'shake') {
+    frame = `<div class="av-frame shake"><div class="av-sk"></div><img class="base" alt="USGS ShakeMap instrumental intensity map, ${where}" decoding="async"><div class="av-msg"><div>The ShakeMap image could not be loaded right now.</div></div></div>`;
+    cap = `<span>USGS ShakeMap · instrumental intensity${q.mmi ? ' · max MMI ' + q.mmi.toFixed(1) : ''}</span><a href="https://earthquake.usgs.gov/earthquakes/eventpage/${encodeURIComponent(r.id)}/shakemap/intensity" target="_blank" rel="noopener">USGS ↗</a>`;
+  } else {
+    ctl = `<div class="av-ctl"><button data-av="d:-1" aria-label="Previous day" ${a.date <= AV_MIN_DATE ? 'disabled' : ''}>${avChev(-1)}</button><span class="av-date" aria-live="polite">${a.date}</span><button data-av="d:1" aria-label="Next day" ${a.date >= today ? 'disabled' : ''}>${avChev(1)}</button></div>`;
+    row += (row ? '<span style="width:6px"></span>' : '') + AV_SATS.map(s => `<button data-av="s:${s.id}" class="sat ${s.id === sat.id ? 'on' : ''}" aria-pressed="${s.id === sat.id}">${s.label}</button>`).join('');
+    if (isFire) row += `<button data-av="f:1" class="${a.fire ? 'on' : ''}" aria-pressed="${a.fire}" title="Overlay thermal anomalies (active fire detections)" style="margin-left:auto">Hotspots</button>`;
+    frame = `<div class="av-frame"><div class="av-sk"></div><img class="base" crossorigin="anonymous" alt="${esc(sat.name)} true-color satellite image of ${where} on ${a.date}" decoding="async">${isFire && a.fire ? '<img class="fire" alt="" decoding="async">' : ''}<div class="av-cross" style="left:${b.x.toFixed(1)}%;top:${b.y.toFixed(1)}%"></div><div class="av-msg"><div>No clear satellite pass for this day — try the previous day.<br><button class="btn" data-av="d:-1">${avChev(-1)} Previous day</button></div></div></div>`;
+    const layers = isFire && a.fire ? [sat.fire, sat.layer] : [sat.layer];
+    cap = `<span>NASA GIBS · ${sat.name} true color${isFire && a.fire ? ' + hotspots' : ''} · ${a.date}</span><a href="${esc(worldviewUrl(b, a.date, layers))}" target="_blank" rel="noopener">Worldview ↗</a>`;
+  }
+  const note = q?.dyfi != null ? `<div class="av-note">Did you feel it? · ${q.dyfi.toLocaleString()} report${q.dyfi === 1 ? '' : 's'}${q.cdi ? ' · max intensity ' + q.cdi.toFixed(1) : ''}</div>` : '';
+  a.host.innerHTML = `<div class="av-h"><span class="eyebrow">Actual view</span>${ctl}</div>${row ? `<div class="av-sats av-ctl">${row}</div>` : ''}${frame}<div class="av-cap">${cap}</div>${note}`;
+  avLoad(a);
+}
+function avLoad(a) {
+  const tok = ++a.tok, fr = a.host.querySelector('.av-frame'), img = fr?.querySelector('img.base'); if (!img) return;
+  const stale = () => a !== av || tok !== a.tok;
+  const done = ok => { if (stale()) return; if (ok) img.classList.add('ok'); fr.classList.toggle('loaded', ok); fr.classList.toggle('err', !ok); };
+  const sat = AV_SATS.find(s => s.id === a.sat) || AV_SATS[0];
+  img.onload = () => {
+    if (stale()) return;
+    if (a.mode === 'sat' && img.crossOrigin && avBlank(img)) {
+      // today's (or a gap) swath not there yet: quietly step back a day, a few times at most
+      if (a.auto > 0 && a.date > AV_MIN_DATE) { a.auto--; a.date = addDay(a.date, -1); renderAV(); return; }
+      done(false); return;
+    }
+    done(true);
+  };
+  img.onerror = () => {
+    if (stale()) return;
+    if (img.crossOrigin) { const u = img.src; img.removeAttribute('crossorigin'); img.src = ''; img.src = u; return; } // retry as a plain image
+    done(false);
+  };
+  if (a.mode === 'shake') img.src = a.quake.shake;
+  else {
+    img.src = gibsUrl(sat.layer, a.box, a.date);
+    const ov = fr.querySelector('img.fire');
+    if (ov) { ov.onload = () => ov.classList.add('ok'); ov.src = gibsUrl(sat.fire, a.box, a.date, true); }
+  }
+}
+
+/* weather card on double-click */
+const WMO = { 0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast', 45: 'Fog', 48: 'Rime fog', 51: 'Light drizzle', 53: 'Drizzle', 55: 'Dense drizzle', 56: 'Freezing drizzle', 57: 'Freezing drizzle', 61: 'Light rain', 63: 'Rain', 65: 'Heavy rain', 66: 'Freezing rain', 67: 'Freezing rain', 71: 'Light snow', 73: 'Snow', 75: 'Heavy snow', 77: 'Snow grains', 80: 'Rain showers', 81: 'Rain showers', 82: 'Violent showers', 85: 'Snow showers', 86: 'Snow showers', 95: 'Thunderstorm', 96: 'Thunderstorm, hail', 99: 'Thunderstorm, hail' };
+async function weatherAt(lat, lon) {
+  selectedId = null; placeReticle(lat, lon, .05);
+  infoItem = { kind: 'wx' }; av = null;
+  const head = `<button class="close" aria-label="Close" id="infoclose"><svg width="14" height="14" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="info-kind"><span class="pill" style="color:#8be6ff">Surface conditions</span></div>
+    <div class="info-title" style="font-size:18px;margin-top:12px" class="num">${fmtLL(lat, lon)}</div>`;
+  info.innerHTML = head + `<div class="eyebrow" style="padding:10px 0">Querying Open-Meteo…</div>`; info.classList.add('show'); $('#infoclose').onclick = closeInfo;
+  const card = (w, note) => {
+    info.innerHTML = head + `<div class="info-big num">${w.t.toFixed(1)}°<small>C</small></div><div style="color:var(--muted);margin:4px 0 12px">${WMO[w.c] || 'Weather code ' + w.c}</div>
+      <div class="info-grid">${kv('Wind', w.w.toFixed(0) + ' km/h')}${kv('Precip', w.p.toFixed(1) + ' mm')}${kv('Local sun', dayState(lat, lon))}${kv('Source', 'Open-Meteo')}</div>${note ? `<div class="eyebrow" style="margin-top:12px;line-height:1.6;letter-spacing:.08em;text-transform:none">${note}</div>` : ''}`;
+    $('#infoclose').onclick = closeInfo;
+  };
+  try {
+    const d = await fetchJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(3)}&longitude=${lon.toFixed(3)}&current=temperature_2m,wind_speed_10m,precipitation,weather_code`, 5000);
+    const c = d.current; card({ t: c.temperature_2m, w: c.wind_speed_10m, p: c.precipitation, c: c.weather_code });
+  } catch {
+    let best = null, bd = 1e9; for (const w of data.weather) { const d = gcKm(lat, lon, w[0], w[1]); if (d < bd) { bd = d; best = w; } }
+    if (best && bd < 1200) card({ t: best[2], w: best[3], p: best[4], c: best[5] }, `Snapshot reading from the nearest sampled point, ${Math.round(bd)} km away. Live weather needs live mode.`);
+    else {
+      info.innerHTML = head + `<div class="info-grid">${kv('Local sun', dayState(lat, lon))}${kv('Mode', 'Snapshot')}</div><div style="margin-top:12px;color:var(--muted);font-size:13px;line-height:1.5">Open-Meteo could not be reached just now, so live weather is unavailable here. Snapshot weather is available near the day’s headline events.</div>`;
+      $('#infoclose').onclick = closeInfo;
+    }
+  }
+}
+function dayState(lat, lon) { const s = subsolar(clock.simT); const d = ll2v(lat, lon).normalize().dot(ll2v(s.lat, s.lon).normalize()); return d > .1 ? 'Daylight' : d > -.1 ? 'Twilight' : 'Night'; }
+
+/* ================================================================ pointer */
+let down = null;
+renderer.domElement.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY, t: performance.now() }; idleT = performance.now(); controls.autoRotate = false; if (cine.on) stopCine(); });
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!down) return; const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y); const dt = performance.now() - down.t; down = null;
+  if (moved > 6 || dt > 500 || ride.on) return;
+  const hit = pick(e.clientX, e.clientY);
+  if (hit) { select(hit, true); if (isMobile) $('#sheet').classList.remove('open'); }
+});
+const raycaster = new THREE.Raycaster();
+renderer.domElement.addEventListener('dblclick', e => {
+  if (ride.on) return;
+  raycaster.setFromCamera(new THREE.Vector2(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1), camera);
+  const h = raycaster.intersectObject(earth)[0]; if (!h) return;
+  const { lat, lon } = v2ll(h.point); weatherAt(lat, lon);
+});
+let idleT = performance.now();
+renderer.domElement.addEventListener('wheel', () => { idleT = performance.now(); controls.autoRotate = false; }, { passive: true });
+
+/* keyboard */
+addEventListener('keydown', e => {
+  if (e.target.matches('input,textarea')) { if (e.key === 'Escape') e.target.blur(); return; }
+  if (e.key === 'c' || e.key === 'C') { cine.on ? stopCine() : startCine(); }
+  else if (e.key === 'Escape') { if (cine.on) stopCine(); else if (ride.on) cancelRide(); else closeInfo(); }
+  else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+});
+$('#cinebtn').onclick = startCine;
+$('#ride').onclick = startRide; $('#rideexit').onclick = cancelRide;
+$('#issfind').onclick = () => { if (issState.ok) select({ kind: 'iss' }, true); };
+
+/* ================================================================ timeline */
+const speeds = [60, 300, 1000]; clock.speed = lsGet('speed') || 300;
+$('#speed').textContent = clock.speed + '×';
+$('#speed').onclick = () => { clock.speed = speeds[(speeds.indexOf(clock.speed) + 1) % speeds.length]; $('#speed').textContent = clock.speed + '×'; lsSet('speed', clock.speed); };
+const PLAY_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>', PAUSE_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
+function togglePlay() {
+  if (clock.playing) { clock.playing = false; }
+  else { if (clock.following || clock.now() - clock.simT < 60e3) clock.simT = clock.now() - 86400e3; clock.playing = true; clock.following = false; }
+  $('#play').innerHTML = clock.playing ? PAUSE_SVG : PLAY_SVG; renderFeed();
+}
+$('#play').onclick = togglePlay;
+$('#scrub').addEventListener('input', e => {
+  const now = clock.now(); const t = now - 86400e3 + (+e.target.value / 1000) * 86400e3;
+  clock.simT = t; clock.following = +e.target.value >= 999; clock.playing = false; $('#play').innerHTML = PLAY_SVG;
+});
+$('#scrub').addEventListener('change', renderFeed);
+$('#golive').onclick = () => { clock.following = true; clock.playing = false; $('#play').innerHTML = PLAY_SVG; renderFeed(); };
+const hist = $('#hist'), hctx = hist.getContext('2d');
+let histData = null;
+function computeHist() {
+  const now = clock.now(), bins = new Array(96).fill(0), mx = new Array(96).fill(0);
+  for (const q of data.quakes) { const i = Math.floor((q.time - (now - 86400e3)) / 900e3); if (i >= 0 && i < 96) { bins[i]++; mx[i] = Math.max(mx[i], q.mag); } }
+  histData = { bins, mx, max: Math.max(1, ...bins) };
+}
+function drawHist() {
+  if (!histData) return;
+  const w = hist.clientWidth, h = hist.clientHeight, dpr = Math.min(2, devicePixelRatio || 1);
+  if (hist.width !== Math.round(w * dpr)) { hist.width = Math.round(w * dpr); hist.height = Math.round(h * dpr); }
+  hctx.setTransform(dpr, 0, 0, dpr, 0, 0); hctx.clearRect(0, 0, w, h);
+  const frac = clamp((clock.simT - (clock.now() - 86400e3)) / 86400e3, 0, 1);
+  const bw = w / 96;
+  histData.bins.forEach((c, i) => {
+    const bh = c ? 2 + Math.sqrt(c / histData.max) * (h - 8) : 1;
+    const played = (i + .5) / 96 <= frac;
+    hctx.fillStyle = played ? 'rgba(57,208,255,.75)' : 'rgba(140,180,230,.18)';
+    hctx.fillRect(i * bw + .5, h - bh, Math.max(1, bw - 1.5), bh);
+    if (histData.mx[i] >= 4.5) { hctx.fillStyle = played ? '#ffb347' : 'rgba(255,179,71,.35)'; hctx.beginPath(); hctx.arc(i * bw + bw / 2, h - bh - 4, 1.8, 0, 7); hctx.fill(); }
+  });
+  $('#thumb').style.left = (frac * 100) + '%';
+  if (document.activeElement !== $('#scrub')) $('#scrub').value = Math.round(frac * 1000);
+}
+
+/* ================================================================ stats & HUD text */
+function updateStats() {
+  const now = clock.simT;
+  const vis = data.quakes.filter(q => q.time <= now && q.time > clock.now() - 86400e3);
+  $('#s-q').innerHTML = vis.length + (clock.following ? '' : '<small>replay</small>');
+  const mx = vis.reduce((a, q) => q.mag > (a?.mag ?? -9) ? q : a, null);
+  $('#s-m').innerHTML = mx ? 'M' + mx.mag.toFixed(1) : '—';
+  $('#s-f').textContent = data.events.filter(e => e.kind === 'fire').length;
+  $('#s-i').innerHTML = issState.ok ? `${(issState.vel / 1000).toFixed(1)}k<small>km/h</small> ${issState.alt.toFixed(0)}<small>km</small>` : '—';
+  if (issState.ok) {
+    $('#iss-v').textContent = Math.round(issState.vel).toLocaleString() + ' km/h'; $('#iss-a').textContent = issState.alt.toFixed(1) + ' km';
+    $('#iss-lat').textContent = issState.lat.toFixed(2) + '°'; $('#iss-lon').textContent = issState.lon.toFixed(2) + '°';
+    $('#iss-orb').textContent = live.iss ? 'LIVE' : 'MODELLED';
+  }
+  $('#utc').textContent = new Date(clock.now()).toISOString().slice(11, 19) + ' UTC';
+  const d = new Date(clock.simT);
+  $('#tlabel').textContent = d.toISOString().slice(11, 16) + ' UTC';
+  const back = clock.now() - clock.simT;
+  $('#tsub').textContent = clock.following ? 'LIVE CLOCK' : clock.playing ? `REPLAY · ${clock.speed}×` : '−' + agoStr(back).replace(' ago', '');
+  $('#golive').style.display = clock.following ? 'none' : 'block';
+}
+function setBadge() {
+  const b = $('#badge');
+  if (clock.mode === 'live') { b.className = 'badge glass live'; $('#badge-t').textContent = 'LIVE'; }
+  else { b.className = 'badge glass snap'; $('#badge-t').textContent = 'Snapshot · ' + fmtUTC(SNAP.captured || clock.base).replace(' UTC', '') + ' UTC'; }
+}
+
+/* ================================================================ template briefing (no-AI fallback) */
+function templateBriefing() {
+  const day = data.quakes.filter(q => q.time > clock.now() - 86400e3);
+  const top = [...day].sort((a, b) => b.mag - a.mag)[0];
+  const m45 = day.filter(q => q.mag >= 4.5).length;
+  const fires = data.events.filter(e => e.kind === 'fire').length, vol = data.events.filter(e => e.kind === 'volcano').length;
+  const storms = data.events.filter(e => e.kind === 'storm');
+  const strongStorm = [...storms].sort((a, b) => (b.magv || 0) - (a.magv || 0))[0];
+  let s = `${day.length} earthquakes shook the planet in the last 24 hours${top ? `, the strongest an M${top.mag.toFixed(1)} ${top.place.replace(/^\d+\s*km\s+\w+\s+of\s+/i, 'near ')}` : ''}; ${m45} reached M4.5 or higher. `;
+  s += `NASA is tracking ${fires} active wildfires${vol ? `, ${vol} restless volcanoes` : ''} and ${storms.length} severe storm${storms.length === 1 ? '' : 's'}${strongStorm ? `, led by ${strongStorm.title}${strongStorm.magv ? ` at ${strongStorm.magv} ${strongStorm.magu || ''}`.trimEnd() : ''}` : ''}. `;
+  if (issState.ok) s += `Overhead, the ISS is crossing ${fmtLL(issState.lat, issState.lon)} at ${Math.round(issState.vel).toLocaleString()} km/h.`;
+  return s;
+}
+function showTemplateBrief() { if (!briefBusy && !briefAI) $('#brief').textContent = templateBriefing(); }
+
+/* ================================================================ Claude layer */
+let sample = null, briefBusy = false, briefAI = false;
+function compactContext() {
+  const now = clock.now();
+  const qs = [...data.quakes].sort((a, b) => b.mag - a.mag).slice(0, 14);
+  const lines = qs.map(q => `${q.id}|M${q.mag.toFixed(1)}|${q.depth.toFixed(0)}km|${q.place}|${agoStr(now - q.time)}|${q.lat.toFixed(2)},${q.lon.toFixed(2)}${q.tsunami ? '|tsunami-flag' : ''}`);
+  const counts = {}; data.events.forEach(e => counts[e.cat] = (counts[e.cat] || 0) + 1);
+  const notable = data.events.filter(e => e.kind !== 'fire').slice(0, 14).map(e => `${e.id}|${e.cat}|${e.title}|${e.magv ? e.magv + (e.magu || '') + '|' : ''}${e.lat.toFixed(2)},${e.lon.toFixed(2)}`);
+  const fires = data.events.filter(e => e.kind === 'fire').slice(0, 6).map(e => `${e.id}|Wildfire|${e.title}|${e.lat.toFixed(2)},${e.lon.toFixed(2)}`);
+  return `Time: ${new Date(now).toISOString()} (${clock.mode} data)
+Earthquakes in last 24h: ${data.quakes.filter(q => q.time > now - 86400e3).length}; M4.5+: ${data.quakes.filter(q => q.time > now - 86400e3 && q.mag >= 4.5).length}
+Top quakes (id|mag|depth|place|age|lat,lon):
+${lines.join('\n')}
+NASA EONET open events by category: ${Object.entries(counts).map(([k, v]) => k + ' ' + v).join(', ')}
+Notable events (id|category|title|lat,lon):
+${notable.join('\n')}
+Sample wildfires:
+${fires.join('\n')}
+ISS: ${issState.ok ? `${fmtLL(issState.lat, issState.lon)}, altitude ${issState.alt.toFixed(0)} km, ${Math.round(issState.vel)} km/h` : 'unknown'}`;
+}
+function aiError(e, el) {
+  if (e?.code === 'not_granted') { disableAI(); if (el) el.textContent = 'Claude access was not granted — showing the data-driven briefing instead.'; showTemplateBriefLater(); return; }
+  if (e?.code === 'rate_limited') { if (el) el.textContent = 'Claude is busy right now — give it a few seconds and try again.'; cooldown(); return; }
+  if (e?.name === 'AbortError') return;
+  if (el) el.textContent = 'Could not reach Claude (' + (e?.message || 'error') + ').';
+}
+function showTemplateBriefLater() { setTimeout(() => { briefAI = false; showTemplateBrief(); }, 4000); }
+function cooldown() { const b = $('#briefbtn'); b.disabled = true; setTimeout(() => b.disabled = false, 20000); }
+function enableAI() {
+  $('#briefbtn').style.display = ''; $('#ask').style.display = 'block'; $('#aimark').style.display = '';
+  if (infoItem && infoItem.kind !== 'wx') openInfo(infoItem);
+}
+function disableAI() {
+  sample = null; $('#briefbtn').style.display = 'none'; $('#ask').style.display = 'none'; $('#aimark').style.display = 'none'; $('#answer').style.display = 'none';
+  $('#explainbtn')?.remove();
+}
+(async () => {
+  try {
+    const use = window.claude?.use; if (typeof use !== 'function') return;
+    const s = await use.call(window.claude, 'sample');
+    if (typeof s === 'function') { sample = s; enableAI(); }
+  } catch { sample = null; }
+})();
+let briefCtl = null;
+$('#briefbtn').onclick = async () => {
+  if (!sample || briefBusy) return; briefBusy = true; briefAI = true; const el = $('#brief'); const btn = $('#briefbtn'); btn.disabled = true; btn.textContent = 'Listening to the planet…';
+  el.innerHTML = '<span class="cursor"></span>';
+  briefCtl?.abort(); briefCtl = new AbortController();
+  try {
+    const prompt = `You are the narrator of Earth Pulse, a real-time planetary dashboard. Using only the data below, write a vivid but factual state-of-the-planet briefing in exactly 3 sentences (max 75 words total). Mention the most significant quake with its location, the natural-event picture, and one striking detail. No markdown, no preamble.\n\n${compactContext()}`;
+    const r = await sample(prompt, { modelTier: 'quick', signal: briefCtl.signal, onText: ({ text }) => { el.textContent = text; const c = document.createElement('span'); c.className = 'cursor'; el.appendChild(c); } });
+    el.textContent = r.text.trim();
+  } catch (e) { aiError(e, el); }
+  finally { briefBusy = false; btn.disabled = false; btn.textContent = 'Regenerate briefing'; }
+};
+let askBusy = false;
+$('#ask').addEventListener('submit', async e => {
+  e.preventDefault(); const q = $('#askin').value.trim(); if (!q || !sample || askBusy) return;
+  askBusy = true; const out = $('#answer'); out.style.display = 'block'; out.innerHTML = '<span class="eyebrow">Consulting the planet…</span>';
+  try {
+    const prompt = `You answer questions about the live state of Earth for the Earth Pulse dashboard. Use ONLY the data table below; if it cannot answer, say so briefly. Reply as JSON only: {"answer": string (max 3 sentences), "focus": {"lat": number, "lon": number} | null (a location the camera should fly to, if relevant), "eventId": string | null (one id from the table if the answer centres on a specific event)}.\n\nQuestion: ${q}\n\nData:\n${compactContext()}`;
+    const r = await sample.json(prompt, { modelTier: 'default' });
+    out.textContent = String(r?.answer || 'No answer.');
+    const it = r?.eventId ? findItem(String(r.eventId)) : null;
+    if (it) select(it, true);
+    else if (r?.focus && isFinite(r.focus.lat) && isFinite(r.focus.lon)) { placeReticle(+r.focus.lat, +r.focus.lon, .08); flyTo(+r.focus.lat, +r.focus.lon, 2.2); }
+  } catch (err) { aiError(err, out); }
+  finally { askBusy = false; }
+});
+async function explain(item) {
+  if (!sample) return; const el = $('#explain'); const btn = $('#explainbtn'); el.style.display = 'block'; el.innerHTML = '<span class="cursor"></span>'; if (btn) btn.disabled = true;
+  const r = item.ref;
+  const desc = item.kind === 'quake'
+    ? `Earthquake M${r.mag} at depth ${r.depth} km, ${r.place} (${r.lat.toFixed(2)}, ${r.lon.toFixed(2)}), ${agoStr(clock.now() - r.time)}${r.tsunami ? ', USGS tsunami flag set' : ''}. USGS significance ${r.sig}.`
+    : `${r.cat}: ${r.title} at (${r.lat.toFixed(2)}, ${r.lon.toFixed(2)})${r.magv ? `, ${r.magv} ${r.magu || ''}` : ''}, last updated ${agoStr(clock.now() - r.time)}.`;
+  try {
+    const res = await sample(`Explain this natural event for a curious viewer of a planet dashboard in 3 short sentences: what likely caused it (tectonic setting / fire weather / storm dynamics), what the numbers mean, and what to watch. Be concrete, no markdown, no hedging boilerplate.\n\n${desc}`, { modelTier: 'quick', onText: ({ text }) => { el.textContent = text; } });
+    el.textContent = res.text.trim();
+  } catch (e) { aiError(e, el); }
+  finally { if (btn) btn.disabled = false; }
+}
+
+/* ================================================================ data loading */
+function loadSnapshot() {
+  data.quakes = parseSnapQuakes(SNAP.quakes);
+  data.events = parseSnapEvents(SNAP.eonet);
+  data.iss = (SNAP.iss || []).map(r => ({ t: r[0], lat: r[1], lon: r[2], alt: r[3], vel: r[4] }));
+}
+function dataChanged() { buildQuakes(); buildEvents(); rebuildMarkers(); computeHist(); renderFeed(); showTemplateBrief(); applyLayers(); }
+async function liveQuakes() {
+  const [day, sig] = await Promise.all([
+    fetchJSON('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson'),
+    fetchJSON('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_week.geojson').catch(() => ({ features: [] })),
+  ]);
+  data.quakes = mergeQuakes(parseUSGS(sig), parseUSGS(day)); live.quakes = true;
+}
+async function liveEONET() {
+  const [a, b] = await Promise.all([
+    fetchJSON('https://eonet.gsfc.nasa.gov/api/v3/events?status=open&limit=200', 12000),
+    fetchJSON('https://eonet.gsfc.nasa.gov/api/v3/events?status=open&category=volcanoes,severeStorms,seaLakeIce,floods,dustHaze&limit=100', 12000).catch(() => ({ events: [] })),
+  ]);
+  data.events = parseEONET([...(b.events || []), ...(a.events || [])]); live.eonet = true;
+}
+async function liveISSInit() {
+  const t = Math.floor(Date.now() / 1000);
+  const arr = await fetchJSON(`https://api.wheretheiss.at/v1/satellites/25544/positions?timestamps=${[-1200, -600, 0, 600, 1200, 1800].map(d => t + d).join(',')}&units=kilometers`, 6000);
+  data.iss = arr.map(p => ({ t: p.timestamp, lat: p.latitude, lon: p.longitude, alt: p.altitude, vel: p.velocity })).sort((a, b) => a.t - b.t); live.iss = true; modelCache.clear();
+}
+async function pollISS() {
+  if (!live.iss) return;
+  try {
+    const p = await fetchJSON('https://api.wheretheiss.at/v1/satellites/25544', 4000);
+    const f = { t: p.timestamp, lat: p.latitude, lon: p.longitude, alt: p.altitude, vel: p.velocity };
+    data.iss = data.iss.filter(x => Math.abs(x.t - f.t) > 25); data.iss.push(f); data.iss.sort((a, b) => a.t - b.t);
+    if (data.iss.length > 60) data.iss.splice(0, data.iss.length - 60);
+    modelCache.clear();
+  } catch {}
+}
+async function boot() {
+  loadSnapshot(); dataChanged();
+  const results = await Promise.allSettled([liveQuakes(), liveEONET(), liveISSInit()]);
+  if (live.quakes) { clock.mode = 'live'; clock.base = Date.now(); clock.perf0 = performance.now(); clock.simT = clock.now(); }
+  else { // pure snapshot: keep every feed on the snapshot so times stay consistent
+    loadSnapshot(); live.eonet = live.iss = false; modelCache.clear();
+  }
+  setBadge(); dataChanged();
+  if (clock.mode === 'live') {
+    setInterval(async () => { try { await liveQuakes(); dataChanged(); } catch {} }, 60000);
+    setInterval(async () => { try { await liveEONET(); dataChanged(); } catch {} }, 600000);
+    setInterval(pollISS, 3000);
+  }
+  return results;
+}
+
+/* ================================================================ resize */
+function onResize() {
+  const w = innerWidth, h = innerHeight;
+  if (!w || !h) return;
+  camera.aspect = w / h; camera.fov = w < 760 ? 48 : 38; camera.updateProjectionMatrix();
+  renderer.setSize(w, h); composer.setSize(w, h);
+  fxaa.material.uniforms.resolution.value.set(1 / (w * PR), 1 / (h * PR));
+  drawHist();
+}
+addEventListener('resize', onResize);
+
+/* ================================================================ loop */
+let last = performance.now(), hudClock = 0, started = false, frame = 0;
+const isslabel = $('#isslabel'), sellabel = $('#sellabel');
+function placeLabel(el, p, text) {
+  const s = toScreen(p); const vis = s.z < 1 && !occluded(p) && s.x > 0 && s.x < innerWidth && s.y > 0 && s.y < innerHeight;
+  el.style.opacity = vis ? 1 : 0; el.style.transform = `translate(${s.x.toFixed(1)}px,${s.y.toFixed(1)}px)`;
+  if (text != null && el.firstChild.textContent !== text) el.firstChild.textContent = text;
+}
+function tick(now) {
+  requestAnimationFrame(tick);
+  frameStep(now);
+}
+function frameStep(now) {
+  const dt = Math.min(.1, (now - last) / 1000); last = now; frame++;
+  U.uTime.value = now / 1000;
+
+  // clock
+  if (clock.playing) {
+    clock.simT += dt * 1000 * clock.speed;
+    if (clock.simT >= clock.now()) { clock.simT = clock.now(); clock.playing = false; clock.following = true; $('#play').innerHTML = PLAY_SVG; renderFeed(); }
+  } else if (clock.following) clock.simT = clock.now();
+  QU.uNow.value = (clock.simT - EPOCH) / 1000;
+  QU.uFlash.value = clock.playing ? Math.max(40, 1.6 * clock.speed) : 40;
+
+  // sun from real (sim) UTC
+  const ss = subsolar(clock.simT); ll2v(ss.lat, ss.lon, 1, sunDir).normalize();
+  sun.position.copy(sunDir).multiplyScalar(700);
+  U.uCloudOff.value = (clock.simT / 1000 / 86400 * .6) % 1 * (reduceMotion ? .3 : 1) + now / 1000 * .0004;
+  U.uLights.value = lerp(U.uLights.value, lightsTarget, .08);
+
+  updateISS(clock.simT);
+  issGroup.visible = issTrail.visible = issGround.visible = layers.iss && issState.ok;
+
+  if (flight) stepFlight(now);
+  else if (ride.on) stepRide(dt);
+  else if (cine.on) { camera.position.applyAxisAngle(Y, dt * .012); camera.lookAt(0, 0, 0); }
+  else {
+    if (!reduceMotion && started && !controls.autoRotate && now - idleT > 25000 && !infoItem) controls.autoRotate = true;
+    controls.update();
+  }
+  // distance-aware zoom sensitivity
+  controls.rotateSpeed = .15 + .3 * clamp((camera.position.length() - 1.2) / 3, 0, 1);
+
+  // labels
+  if (layers.iss && issState.ok && !ride.on) placeLabel(isslabel, issGroup.position, 'ISS · ' + issState.alt.toFixed(0) + ' KM'); else isslabel.style.opacity = 0;
+  if (reticle.visible && infoItem && infoItem.kind !== 'iss' && infoItem.kind !== 'wx' && !cine.on) {
+    const r = infoItem.ref; placeLabel(sellabel, ll2v(r.lat, r.lon, 1.01), infoItem.kind === 'quake' ? 'M' + r.mag.toFixed(1) : (r.cat || '').toUpperCase());
+  } else sellabel.style.opacity = 0;
+  if (infoItem?.kind === 'iss') placeReticle(issState.lat, issState.lon, .05);
+
+  if (now - hudClock > 250) { hudClock = now; updateStats(); drawHist(); if (frame % 240 === 0) renderFeedTimes(); }
+
+  composer.render();
+}
+function renderFeedTimes() {
+  document.querySelectorAll('#feed .ago').forEach(el => { el.textContent = agoStr(clock.simT - +el.dataset.t).replace(' ago', ''); });
+  if (!clock.following) document.querySelectorAll('#feed .row[data-kind="quake"]').forEach(r => { const q = data.quakes.find(x => x.id === r.dataset.id); r.classList.toggle('future', q && q.time > clock.simT); });
+}
+
+/* ================================================================ start */
+applyLayers(); onResize();
+$('#ldst').textContent = 'Loading planet surface';
+const bootP = boot();
+requestAnimationFrame(tick);
+function waitTex() { return new Promise(r => { const c = () => texReady ? r() : setTimeout(c, 50); c(); }); }
+Promise.all([waitTex(), Promise.race([bootP, new Promise(r => setTimeout(r, 2500))])]).then(() => {
+  $('#ldst').textContent = 'Acquiring signals';
+  $('#arc').style.strokeDashoffset = 0;
+  // start deep in space, ease in toward the day/night terminator
+  const ss = subsolar(clock.simT);
+  const lat = 16, lon = ss.lon - 72;
+  const endDist = isMobile ? 4.3 : 3.45;
+  const dir = ll2v(lat + 30, lon - 70, 1).normalize();
+  camera.position.copy(dir).multiplyScalar(38); camera.lookAt(0, 0, 0);
+  setTimeout(() => {
+    $('#loader').classList.add('done');
+    started = true;
+    flyTo(lat, lon, endDist, { dur: 3400, lift: 0, ease: easeOutQuint, cut: reduceMotion, done: () => { idleT = performance.now() - 15000; } });
+    if (reduceMotion) controls.enabled = true;
+  }, 250);
+});
+</script>
+</body>
+</html>

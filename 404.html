@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lost in space · The Observatory</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2305060a'/%3E%3Ccircle cx='16' cy='16' r='8.5' fill='none' stroke='%23e8a27c' stroke-width='1.6'/%3E%3Ccircle cx='16' cy='16' r='2.2' fill='%23f3eee6'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:radial-gradient(60vmax 40vmax at 80% -10%,rgba(232,162,124,.14),transparent 60%),#05060a;color:#f3eee6}
+body{display:grid;place-items:center;padding:24px;font-family:"JetBrains Mono",ui-monospace,monospace}
+main{max-width:560px;text-align:left}
+.k{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#e8a27c}
+h1{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-size:clamp(44px,10vw,88px);line-height:.95;margin:16px 0 18px;letter-spacing:-.02em}
+h1 em{color:#e8a27c}
+p{color:#b5b1a9;font-size:13px;line-height:1.7;margin:0 0 28px}
+a{display:inline-flex;gap:10px;align-items:center;color:#f3eee6;text-decoration:none;font-size:12px;letter-spacing:.12em;text-transform:uppercase;padding:12px 18px;border:1px solid rgba(243,238,230,.2);border-radius:999px;transition:all .3s}
+a:hover,a:focus-visible{background:#e8a27c;color:#120c08;border-color:#e8a27c;outline:none}
+</style>
+</head>
+<body>
+<main>
+  <div class="k">404 · Signal lost</div>
+  <h1>Nothing is orbiting <em>here</em>.</h1>
+  <p>This page doesn’t exist, or it has moved. The instruments are still running.</p>
+  <a href="/">← Back to the Observatory</a>
+</main>
+<script>
+  // GitHub Pages project sites live under /<repo>/, so point "home" at the first path segment when there is one.
+  (function(){ var seg = location.pathname.split('/').filter(Boolean); if (location.hostname.endsWith('github.io') && seg.length) document.querySelector('a').href = '/' + seg[0] + '/'; })();
+</script>
+</body>
+</html>
